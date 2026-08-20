@@ -658,10 +658,11 @@
 
     /* 異步 PVP 排行榜 */
     /* --- 排行榜與異步 PVP 數據即時同步修正 --- */
+   /* --- 排行榜讀取與 PVP 挑戰系統 --- */
     async function loadLeaderboard() {
-      // 點擊時先將當前玩家最新數據同步至雲端，確保天梯分數即時寫入
+      // 讀取排行榜前，先將自己的最新分數同步回 Supabase
       await autoSave();
-      
+
       const { data, error } = await supabaseClient
         .from('leaderboards')
         .select('*')
@@ -669,13 +670,20 @@
         .limit(10);
         
       const board = document.getElementById('pvp-board-list');
+      if(!board) return;
       board.innerHTML = '';
+
       if(data && data.length > 0) {
         data.forEach((opp, idx) => {
           board.innerHTML += `
-            <div class="item-card">
-              <b>No.${idx+1} 玩家: ${opp.user_id}</b> (🏆${opp.rank_points ?? 1000} 分)
-              ${opp.user_id !== currentAccount ? `<button class="btn btn-red" onclick="challengePVP('${opp.user_id}', ${opp.rank_points ?? 1000})">離線挑戰此玩家</button>` : ''}
+            <div class="item-card" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <b>No.${idx+1} 玩家: ${opp.user_id}</b> 
+                <span style="color:#f59e0b; margin-left:8px;">🏆 ${opp.rank_points ?? 1000} 分</span>
+              </div>
+              ${opp.user_id !== currentAccount ? 
+                `<button class="btn btn-red" style="width:110px; margin:0;" onclick="challengePVP('${opp.user_id}', ${opp.rank_points ?? 1000})">離線挑戰</button>` 
+                : '<span style="color:#22c55e; font-size:0.85em; font-weight:bold;">(你自己)</span>'}
             </div>`;
         });
       } else {
@@ -691,7 +699,7 @@
       let total = getTotalStats();
       let myPower = total.shooting + total.speed + total.pass;
       
-      // 模擬戰力判定（加上隨機因素）
+      // 戰力判定
       if(myPower + (Math.random() * 30) > 180) {
         player.rank_points += 25;
         player.coins += 800;
@@ -701,12 +709,12 @@
         addLog(`💔 對戰玩家 [${oppId}] 失敗，積分 -10 (目前: ${player.rank_points})。`);
       }
 
-      // 立即更新前端 UI 並同步寫入 Supabase 雲端資料庫
+      // 1. 更新前端 UI
       updateUI();
+      // 2. 寫入 Supabase 資料庫
       await autoSave();
-      
-      // 重新載入最新全服排行榜
-      loadLeaderboard();
+      // 3. 重新刷出排行榜
+      await loadLeaderboard();
     }
   </script>
 </body>
