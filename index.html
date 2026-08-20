@@ -324,14 +324,19 @@
     }
 
     /* 5 大特訓與理療小遊戲切換與執行 */
+    /* --- 5 大互動小遊戲系統修復 --- */
     function selectMinigame(mode) {
       selectedGameMode = mode;
+      if(gameTimer) clearInterval(gameTimer);
+      const stage = document.getElementById('game-stage');
+      stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 開始挑戰</button>`;
+      
       const descs = {
-        shooting: '🎯 射門特訓：10秒內點擊出現的目標球，提升射門能力。',
-        pass: '⚽ 傳球特訓：點擊精準連線傳球，提升傳球能力。',
-        dribble: '🏃 盤球特訓：左右避開障礙物，提升盤球與速度。',
-        fk: '📐 自由球特訓：抓準角度條時機，提升自由球技術。',
-        massage: '💆 理療按摩：節奏放鬆肌肉，大幅恢復體力。'
+        shooting: '🎯 射門特訓：8 秒內連續點擊出現的目標球！',
+        pass: '⚽ 傳球特訓：8 秒內按順序點擊出現的 1 -> 2 -> 3 號隊友！',
+        dribble: '🏃 盤球特訓：8 秒內快速點擊出現的紅色防守球員完成過人！',
+        fk: '📐 自由球特訓：點擊計量條，讓黃線停在綠色完美區！',
+        massage: '💆 理療按摩：8 秒內連續按壓放鬆點，大幅恢復體力！'
       };
       document.getElementById('game-desc').innerText = descs[mode];
     }
@@ -340,53 +345,139 @@
       if(selectedGameMode !== 'massage' && player.stamina < 15) return addLog('❌ 體力不足 15！');
       if(selectedGameMode !== 'massage') player.stamina -= 15;
       
+      if(gameTimer) clearInterval(gameTimer);
       gameScore = 0;
       const stage = document.getElementById('game-stage');
       stage.innerHTML = '';
       
-      if(selectedGameMode === 'shooting' || selectedGameMode === 'massage') {
+      // 1. 射門 / 理療 / 盤球 (點擊類型)
+      if(['shooting', 'massage', 'dribble'].includes(selectedGameMode)) {
         let timeLeft = 8;
-        spawnBall();
+        spawnGameObjects();
         gameTimer = setInterval(() => {
           timeLeft--;
           if(timeLeft <= 0) {
             clearInterval(gameTimer);
             stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 再次挑戰</button>`;
-            if(selectedGameMode === 'shooting') {
-              let gain = Math.floor(gameScore / 2);
-              player.stats.shooting += gain;
-              player.quests.train++;
-              addLog(`🎉 射門特訓完成！得分 ${gameScore}，基礎射門 +${gain}！`);
-            } else {
-              let recover = 30 + (gameScore * 5);
-              player.stamina = Math.min(player.stats.stamina_max, player.stamina + recover);
-              addLog(`💆 理療按摩完成！恢復體力 +${recover}！`);
-            }
-            updateUI();
+            finishMinigame();
           }
         }, 1000);
+      } 
+      // 2. 傳球 (1->2->3 順序點擊)
+      else if(selectedGameMode === 'pass') {
+        let timeLeft = 8;
+        spawnPassTargets(1);
+        gameTimer = setInterval(() => {
+          timeLeft--;
+          if(timeLeft <= 0) {
+            clearInterval(gameTimer);
+            stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 再次挑戰</button>`;
+            finishMinigame();
+          }
+        }, 1000);
+      } 
+      // 3. 自由球 (抓時機量表)
+      else if(selectedGameMode === 'fk') {
+        let pos = 0, dir = 1;
+        stage.innerHTML = `
+          <div style="width:80%; height:35px; background:#1e293b; border:2px solid #fff; border-radius:20px; position:relative; overflow:hidden; cursor:pointer;" onclick="stopFKGame()">
+            <div style="position:absolute; left:40%; width:20%; height:100%; background:#22c55e;"></div>
+            <div id="fk-pointer" style="position:absolute; left:0%; width:8px; height:100%; background:#f59e0b;"></div>
+          </div>
+          <p style="position:absolute; bottom:15px; font-size:0.85em; color:#cbd5e1;">點擊區塊：讓黃條停在綠色完美區域！</p>
+        `;
+        gameTimer = setInterval(() => {
+          pos += dir * 4;
+          if(pos >= 95 || pos <= 0) dir *= -1;
+          const ptr = document.getElementById('fk-pointer');
+          if(ptr) ptr.style.left = pos + '%';
+        }, 20);
+      }
+      updateUI();
+    }
+
+    function stopFKGame() {
+      clearInterval(gameTimer);
+      const ptr = document.getElementById('fk-pointer');
+      if(!ptr) return;
+      let pos = parseInt(ptr.style.left);
+      const stage = document.getElementById('game-stage');
+      
+      if(pos >= 40 && pos <= 60) {
+        gameScore = 100;
+        addLog('🎯 完美弧線進球！特訓大成功！');
       } else {
-        // 其他特訓模式簡化結算
-        player.stats[selectedGameMode === 'pass' ? 'pass' : selectedGameMode === 'dribble' ? 'dribble' : 'fk'] += 3;
-        player.quests.train++;
-        stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 再次挑戰</button>`;
-        addLog(`🎉 完成 ${selectedGameMode} 特訓！對應屬性 +3！`);
-        updateUI();
+        gameScore = 30;
+        addLog('⚽ 射門偏出或力量控制不佳！');
+      }
+      stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 再次挑戰</button>`;
+      finishMinigame();
+    }
+
+    function spawnGameObjects() {
+      const stage = document.getElementById('game-stage');
+      stage.innerHTML = '';
+      const ball = document.createElement('div');
+      ball.className = 'target-ball';
+      
+      if(selectedGameMode === 'shooting') ball.innerText = '⚽';
+      else if(selectedGameMode === 'massage') ball.innerText = '💆';
+      else if(selectedGameMode === 'dribble') {
+        ball.innerText = '🏃';
+        ball.style.background = '#ef4444';
+      }
+      
+      ball.style.top = Math.floor(Math.random() * 170) + 'px';
+      ball.style.left = Math.floor(Math.random() * 75) + '%';
+      ball.onclick = () => { gameScore++; spawnGameObjects(); };
+      stage.appendChild(ball);
+    }
+
+    function spawnPassTargets(nextNum) {
+      const stage = document.getElementById('game-stage');
+      stage.innerHTML = '';
+      if(nextNum > 3) {
+        gameScore += 3;
+        return spawnPassTargets(1);
+      }
+      for(let i = 1; i <= 3; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'target-ball';
+        btn.innerText = i;
+        btn.style.background = (i === nextNum) ? '#0284c7' : '#334155';
+        btn.style.top = Math.floor(Math.random() * 160) + 'px';
+        btn.style.left = ((i - 1) * 30 + 10) + '%';
+        btn.onclick = () => {
+          if(i === nextNum) spawnPassTargets(nextNum + 1);
+        };
+        stage.appendChild(btn);
       }
     }
 
-    function spawnBall() {
-      const stage = document.getElementById('game-stage');
-      const old = document.querySelector('.target-ball');
-      if(old) old.remove();
-
-      const ball = document.createElement('div');
-      ball.className = 'target-ball';
-      ball.innerText = selectedGameMode === 'massage' ? '💆' : '⚽';
-      ball.style.top = Math.floor(Math.random() * 180) + 'px';
-      ball.style.left = Math.floor(Math.random() * 80) + '%';
-      ball.onclick = () => { gameScore++; spawnBall(); };
-      stage.appendChild(ball);
+    function finishMinigame() {
+      player.quests.train++;
+      if(selectedGameMode === 'shooting') {
+        let gain = Math.max(1, Math.floor(gameScore / 2));
+        player.stats.shooting += gain;
+        addLog(`🎯 射門特訓完成！得分 ${gameScore}，基礎射門 +${gain}！`);
+      } else if(selectedGameMode === 'pass') {
+        let gain = Math.max(1, Math.floor(gameScore / 2));
+        player.stats.pass += gain;
+        addLog(`⚽ 傳球特訓完成！完成 ${gameScore} 次傳球，傳球 +${gain}！`);
+      } else if(selectedGameMode === 'dribble') {
+        let gain = Math.max(1, Math.floor(gameScore / 2));
+        player.stats.dribble += gain;
+        addLog(`🏃 盤球特訓完成！閃避 ${gameScore} 次，盤球 +${gain}！`);
+      } else if(selectedGameMode === 'fk') {
+        let gain = gameScore === 100 ? 5 : 1;
+        player.stats.fk += gain;
+        addLog(`📐 自由球特訓完成！自由球 +${gain}！`);
+      } else if(selectedGameMode === 'massage') {
+        let recover = 30 + (gameScore * 5);
+        player.stamina = Math.min(player.stats.stamina_max, player.stamina + recover);
+        addLog(`💆 理療按摩完成！恢復體力 +${recover}！`);
+      }
+      updateUI();
     }
 
     /* 裝備與背包系統 */
