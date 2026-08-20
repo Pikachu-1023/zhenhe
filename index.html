@@ -121,7 +121,7 @@
       </div>
     </div>
 
-    <!-- 3. 裝備與背包庫 (4大部位子分頁) -->
+    <!-- 裝備與背包庫 (帶有 4 大部位子分頁) -->
     <div id="tab-inventory" class="tab-content">
       <h2>👟 裝備部位與背包庫</h2>
       <div class="grid" style="margin-top:10px;">
@@ -131,19 +131,19 @@
           <div class="stat-row"><span>球衣短褲:</span><b id="eq-kits">無</b></div>
           <div class="stat-row"><span>護腿板:</span><b id="eq-pads">無</b></div>
           <div class="stat-row"><span>門將手套:</span><b id="eq-gloves">無</b></div>
-          <button class="btn btn-orange" onclick="drawGacha()">🎁 裝備盲盒抽獎 (💰500)</button>
+          <button class="btn btn-orange" style="margin-top:15px;" onclick="drawGacha()">🎁 裝備盲盒抽獎 (💰500)</button>
         </div>
         <div class="box">
           <h3>🎒 背包裝備選擇</h3>
-          <!-- 裝備子分頁選單 -->
-          <div style="display:flex; gap:4px; margin: 8px 0; flex-wrap:wrap;">
+          <!-- 裝備類別篩選按鈕 -->
+          <div style="display:flex; gap:6px; margin: 8px 0; flex-wrap:wrap;">
             <button class="sub-eq-btn active" onclick="filterInventory('all', this)">全部</button>
             <button class="sub-eq-btn" onclick="filterInventory('boots', this)">👟 戰靴</button>
             <button class="sub-eq-btn" onclick="filterInventory('kits', this)">👕 球衣</button>
             <button class="sub-eq-btn" onclick="filterInventory('pads', this)">🛡️ 護腿板</button>
             <button class="sub-eq-btn" onclick="filterInventory('gloves', this)">🧤 手套</button>
           </div>
-          <div id="inventory-list" style="max-height:200px; overflow-y:auto;"></div>
+          <div id="inventory-list" style="max-height:220px; overflow-y:auto;"></div>
         </div>
       </div>
     </div>
