@@ -206,14 +206,33 @@
       const msg = document.getElementById('authMsg');
       if(!u || !p) return msg.innerText = '請輸入帳密';
 
+      msg.innerText = '連線處理中...';
+
       if(type === 'register') {
-        const { error } = await supabaseClient.from('accounts').insert([{ username: u, password: p }]);
-        if(error) return msg.innerText = '帳號已存在';
-        await supabaseClient.from('players').insert([{ user_id: u }]);
-        msg.style.color = '#22c55e'; msg.innerText = '註冊成功！請點登入。';
+        // 註冊帳號
+        const { error: accErr } = await supabaseClient.from('accounts').insert([{ username: u, password: p }]);
+        if(accErr) return msg.innerText = '帳號已存在或註冊失敗！';
+        
+        // 初始化玩家資料
+        await supabaseClient.from('players').insert([{ 
+          user_id: u,
+          coins: 2000,
+          diamonds: 50,
+          stamina: 100,
+          rank_points: 1000,
+          pve_stage: 1
+        }]);
+
+        msg.style.color = '#22c55e'; 
+        msg.innerText = '註冊成功！請點擊「登入」按鈕。';
       } else {
-        const { data } = await supabaseClient.from('accounts').select('*').eq('username', u).eq('password', p);
-        if(!data || data.length === 0) return msg.innerText = '帳密錯誤';
+        // 驗證登入
+        const { data, error } = await supabaseClient.from('accounts').select('*').eq('username', u).eq('password', p);
+        if(error || !data || data.length === 0) {
+          msg.style.color = '#ef4444';
+          return msg.innerText = '帳號或密碼錯誤！';
+        }
+
         currentAccount = u;
         await loadData();
         document.getElementById('authOverlay').style.display = 'none';
@@ -222,20 +241,25 @@
     }
 
     async function loadData() {
-      const { data } = await supabaseClient.from('players').select('*').eq('user_id', currentAccount);
+      const { data, error } = await supabaseClient.from('players').select('*').eq('user_id', currentAccount);
       if(data && data[0]) {
         let d = data[0];
-        if(d.detailed_stats) player.stats = d.detailed_stats;
-        if(d.full_equipment) player.equipment = d.full_equipment;
+        if(d.detailed_stats) player.stats = { ...player.stats, ...d.detailed_stats };
+        if(d.full_equipment) player.equipment = { ...player.equipment, ...d.full_equipment };
         if(d.inventory) player.inventory = d.inventory;
-        if(d.quest_progress) player.quests = d.quest_progress;
-        player.coins = d.coins || 2000;
-        player.diamonds = d.diamonds || 50;
-        player.rank_points = d.rank_points || 1000;
-        player.pve_stage = d.pve_stage || 1;
+        if(d.quest_progress) player.quests = { ...player.quests, ...d.quest_progress };
+        player.coins = d.coins ?? 2000;
+        player.diamonds = d.diamonds ?? 50;
+        player.rank_points = d.rank_points ?? 1000;
+        player.pve_stage = d.pve_stage ?? 1;
         document.getElementById('p-account').innerText = currentAccount;
         updateUI();
         addLog(`✅ 成功載入玩家 [${currentAccount}] 雲端存檔！`);
+      } else {
+        // 若沒有玩家紀錄則自動新建
+        await supabaseClient.from('players').upsert([{ user_id: currentAccount }]);
+        document.getElementById('p-account').innerText = currentAccount;
+        updateUI();
       }
     }
 
