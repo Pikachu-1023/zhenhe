@@ -220,66 +220,89 @@
   }
 }
 
+    /* --- 帳號登入與註冊修復邏輯 --- */
     async function handleAuth(type) {
       const u = document.getElementById('authUsername').value.trim();
       const p = document.getElementById('authPassword').value.trim();
       const msg = document.getElementById('authMsg');
-      if(!u || !p) return msg.innerText = '請輸入帳密';
+      if(!u || !p) return msg.innerText = '⚠️ 請輸入帳號與密碼！';
 
       msg.innerText = '連線處理中...';
 
-      if(type === 'register') {
-        // 註冊帳號
-        const { error: accErr } = await supabaseClient.from('accounts').insert([{ username: u, password: p }]);
-        if(accErr) return msg.innerText = '帳號已存在或註冊失敗！';
-        
-        // 初始化玩家資料
-        await supabaseClient.from('players').insert([{ 
-          user_id: u,
-          coins: 2000,
-          diamonds: 50,
-          stamina: 100,
-          rank_points: 1000,
-          pve_stage: 1
-        }]);
+      try {
+        if(type === 'register') {
+          // 1. 註冊帳號
+          const { error: accErr } = await supabaseClient.from('accounts').insert([{ username: u, password: p }]);
+          if(accErr) return msg.innerText = '❌ 帳號已存在或註冊失敗！';
 
-        msg.style.color = '#22c55e'; 
-        msg.innerText = '註冊成功！請點擊「登入」按鈕。';
-      } else {
-        // 驗證登入
-        const { data, error } = await supabaseClient.from('accounts').select('*').eq('username', u).eq('password', p);
-        if(error || !data || data.length === 0) {
-          msg.style.color = '#ef4444';
-          return msg.innerText = '帳號或密碼錯誤！';
+          // 2. 初始化玩家資料庫預設值
+          const defaultPlayer = {
+            user_id: u,
+            coins: 2000,
+            diamonds: 50,
+            rank_points: 1000,
+            stamina: 100,
+            pve_stage: 1,
+            detailed_stats: { shooting: 10, pass: 10, dribble: 10, fk: 10, speed: 10, acc: 10, stamina_max: 100, str: 10, def: 10, gk: 10 },
+            full_equipment: { boots: null, kits: null, pads: null, gloves: null },
+            inventory: [],
+            quest_progress: { train: 0, gacha: 0, pvp: 0 }
+          };
+
+          await supabaseClient.from('players').insert([defaultPlayer]);
+          await supabaseClient.from('leaderboards').upsert([{ user_id: u, rank_points: 1000 }], { onConflict: 'user_id' });
+
+          msg.innerText = '🎉 註冊成功！請點擊「登入」。';
+        } else {
+          // 3. 驗證登入
+          const { data, error } = await supabaseClient
+            .from('accounts')
+            .select('*')
+            .eq('username', u)
+            .eq('password', p)
+            .maybeSingle();
+
+          if(error || !data) {
+            return msg.innerText = '❌ 帳號或密碼錯誤！';
+          }
+
+          currentAccount = u;
+          await loadData(u);
+
+          // 4. 登入成功，切換遊戲主畫面
+          document.getElementById('auth-screen').style.display = 'none';
+          document.getElementById('main-game').style.display = 'block';
+          
+          if(typeof updateUI === 'function') updateUI();
+          if(typeof loadLeaderboard === 'function') loadLeaderboard();
         }
-
-        currentAccount = u;
-        await loadData();
-        document.getElementById('authOverlay').style.display = 'none';
-        document.getElementById('mainGame').style.display = 'block';
+      } catch (err) {
+        console.error('Auth Error:', err);
+        msg.innerText = '❌ 連線發生錯誤，請重新嘗試！';
       }
     }
 
-    async function loadData() {
-      const { data, error } = await supabaseClient.from('players').select('*').eq('user_id', currentAccount);
-      if(data && data[0]) {
-        let d = data[0];
-        if(d.detailed_stats) player.stats = { ...player.stats, ...d.detailed_stats };
-        if(d.full_equipment) player.equipment = { ...player.equipment, ...d.full_equipment };
-        if(d.inventory) player.inventory = d.inventory;
-        if(d.quest_progress) player.quests = { ...player.quests, ...d.quest_progress };
-        player.coins = d.coins ?? 2000;
-        player.diamonds = d.diamonds ?? 50;
-        player.rank_points = d.rank_points ?? 1000;
-        player.pve_stage = d.pve_stage ?? 1;
-        document.getElementById('p-account').innerText = currentAccount;
-        updateUI();
-        addLog(`✅ 成功載入玩家 [${currentAccount}] 雲端存檔！`);
-      } else {
-        // 若沒有玩家紀錄則自動新建
-        await supabaseClient.from('players').upsert([{ user_id: currentAccount }]);
-        document.getElementById('p-account').innerText = currentAccount;
-        updateUI();
+    /* --- 載入雲端玩家數據 --- */
+    async function loadData(username) {
+      const { data, error } = await supabaseClient
+        .from('players')
+        .select('*')
+        .eq('user_id', username)
+        .maybeSingle();
+
+      if(data) {
+        player = {
+          coins: data.coins ?? 2000,
+          diamonds: data.diamonds ?? 50,
+          rank_points: data.rank_points ?? 1000,
+          stamina: data.stamina ?? 100,
+          pve_stage: data.pve_stage ?? 1,
+          stats: data.detailed_stats || { shooting: 10, pass: 10, dribble: 10, fk: 10, speed: 10, acc: 10, stamina_max: 100, str: 10, def: 10, gk: 10 },
+          equipment: data.full_equipment || { boots: null, kits: null, pads: null, gloves: null },
+          inventory: data.inventory || [],
+          quests: data.quest_progress || { train: 0, gacha: 0, pvp: 0 }
+        };
+        if(typeof fixInventoryUIDs === 'function') fixInventoryUIDs();
       }
     }
 /* --- 雲端強制自動儲存 --- */
