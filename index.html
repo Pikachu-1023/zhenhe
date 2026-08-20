@@ -539,23 +539,83 @@
       updateUI();
     }
 
-   let currentEqFilter = 'all';
+  let currentEqFilter = 'all';
 
     function filterInventory(type, btn) {
       currentEqFilter = type;
       if(btn) {
-        document.querySelectorAll('.sub-eq-btn').forEach(b => b.style.opacity = '0.6');
-        btn.style.opacity = '1';
+        document.querySelectorAll('.sub-eq-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
       }
       renderInventory();
     }
 
+    /* 補全 UID 避免全部按鈕變「脫下」 */
+    function fixInventoryUIDs() {
+      if(!player.inventory) player.inventory = [];
+      player.inventory.forEach((item, index) => {
+        if(!item.uid) item.uid = (item.id || 'item') + '_' + Date.now() + '_' + index;
+      });
+      if(player.equipment) {
+        Object.keys(player.equipment).forEach(type => {
+          if(player.equipment[type] && !player.equipment[type].uid) {
+            player.equipment[type].uid = player.equipment[type].id + '_eq';
+          }
+        });
+      }
+    }
+
+    /* 強制寫入 Supabase (更新個人數據 + 排行榜) */
+    async function autoSave() {
+      if (!currentAccount) return;
+      fixInventoryUIDs();
+      
+      const { error } = await supabaseClient
+        .from('players')
+        .update({
+          rank_points: player.rank_points,
+          coins: player.coins,
+          diamonds: player.diamonds,
+          stamina: player.stamina,
+          pve_stage: player.pve_stage,
+          detailed_stats: player.stats,
+          full_equipment: player.equipment,
+          inventory: player.inventory,
+          quest_progress: player.quests
+        })
+        .eq('user_id', currentAccount);
+
+      // 同步全服排行榜表
+      await supabaseClient
+        .from('leaderboards')
+        .upsert({ user_id: currentAccount, rank_points: player.rank_points }, { onConflict: 'user_id' });
+
+      if (error) console.error('雲端同步失敗:', error);
+    }
+
+    /* 抽獎並寫入雲端 */
+    async function drawGacha() {
+      if(player.coins < 500) return addLog('❌ 金幣不足 500 ！');
+      player.coins -= 500;
+      player.quests.gacha++;
+      
+      const baseItem = gachaPool[Math.floor(Math.random() * gachaPool.length)];
+      const newItem = { ...baseItem, uid: baseItem.id + '_' + Date.now() };
+      
+      player.inventory.push(newItem);
+      addLog(`🎁 抽中【${newItem.name}】並存入背包！`);
+      
+      updateUI();
+      await autoSave();
+    }
+
+    /* 背包清單渲染 */
     function renderInventory() {
+      fixInventoryUIDs();
       const list = document.getElementById('inventory-list');
       if(!list) return;
       list.innerHTML = '';
 
-      // 根據選取的子分頁篩選裝備
       const filtered = player.inventory.filter(item => {
         if(currentEqFilter === 'all') return true;
         return item.type === currentEqFilter;
@@ -567,8 +627,7 @@
       }
 
       filtered.forEach((item) => {
-        // 精確比對 unique id (uid)，同部位一次只會有一件顯示「脫下」
-        let isEquipped = player.equipment[item.type]?.uid === item.uid;
+        let isEquipped = !!(item.uid && player.equipment[item.type]?.uid === item.uid);
         list.innerHTML += `
           <div class="item-card" style="display:flex; justify-content:space-between; align-items:center;">
             <div>
@@ -587,11 +646,12 @@
       return Object.entries(item.boost).map(([k, v]) => `${k} +${v}`).join(', ');
     }
 
-    function equip(uid) {
-      const item = player.inventory.find(i => i.uid == uid);
+    /* 穿脫裝備 */
+    async function equip(uid) {
+      fixInventoryUIDs();
+      const item = player.inventory.find(i => i.uid === uid);
       if(!item) return;
 
-      // 若已穿著此裝備則脫下，否則替換為新裝備
       if (player.equipment[item.type]?.uid === item.uid) {
         player.equipment[item.type] = null;
         addLog(`👟 已卸下裝備【${item.name}】！`);
@@ -601,105 +661,10 @@
       }
 
       updateUI();
-      if(typeof autoSave === 'function') autoSave();
-    }
-
-    /* 任務系統 */
-    function renderQuests() {
-      const qList = document.getElementById('quest-list');
-      const questsData = [
-        { id:'q1', name:'完成 2 次特訓', key:'train', target:2, rewardCoins:600 },
-        { id:'q2', name:'進行 1 次抽獎', key:'gacha', target:1, rewardCoins:500 },
-        { id:'q3', name:'挑戰 1 次 PVP', key:'pvp', target:1, rewardCoins:800 }
-      ];
-      qList.innerHTML = '';
-      questsData.forEach(q => {
-        let count = player.quests[q.key] || 0;
-        let claimed = player.quests.claimed.includes(q.id);
-        qList.innerHTML += `
-          <div class="item-card">
-            <b>${q.name} (${count}/${q.target})</b> - 獎勵 💰${q.rewardCoins}
-            ${claimed ? '<b style="color:#22c55e;">[已領取]</b>' : `<button class="btn btn-orange" onclick="claimQ('${q.id}', ${q.rewardCoins}, ${count >= q.target})">領取獎勵</button>`}
-          </div>`;
-      });
-    }
-
-    function claimQ(id, coins, canClaim) {
-      if(!canClaim) return addLog('❌ 任務條件未達成！');
-      player.coins += coins;
-      player.quests.claimed.push(id);
-      addLog(`💰 成功領取任務獎勵金幣 +${coins}！`);
-      updateUI();
-    }
-
-    /* 20 關 PVE 闖關 */
-    function renderPVE() {
-      const pveBox = document.getElementById('pve-list');
-      pveBox.innerHTML = '';
-      for(let i = 1; i <= 20; i++) {
-        let isCurrent = i === player.pve_stage;
-        pveBox.innerHTML += `
-          <div class="box" style="${isCurrent ? 'border-color:#f59e0b;' : ''}">
-            <h3>第 ${i} 關 ${i < player.pve_stage ? '✅ 已通關' : ''}</h3>
-            <p style="font-size:0.8em;">對手戰力: ${500 + (i * 80)}</p>
-            ${isCurrent ? `<button class="btn btn-green" onclick="challengePVE(${i})">挑戰第 ${i} 關</button>` : ''}
-          </div>`;
-      }
-    }
-
-    function challengePVE(stageNum) {
-      if(player.stamina < 20) return addLog('❌ 體力不足 20！');
-      player.stamina -= 20;
-      let total = getTotalStats();
-      let myPower = total.shooting + total.speed + total.pass;
-      let oppPower = 180 + (stageNum * 30);
-
-      if(myPower >= oppPower) {
-        player.pve_stage++;
-        player.coins += 1000 + (stageNum * 200);
-        player.diamonds += 20;
-        addLog(`🏆 順利通關第 ${stageNum} 關！獲得 💰${1000 + (stageNum * 200)} 與 💎20！`);
-      } else {
-        addLog(`💔 挑戰第 ${stageNum} 關失敗，實力不足！`);
-      }
-      updateUI();
-    }
-
-    /* 異步 PVP 排行榜 */
-    /* --- 排行榜與異步 PVP 數據即時同步修正 --- */
-   /* --- 排行榜讀取與 PVP 挑戰系統 --- */
-    async function loadLeaderboard() {
-      // 讀取排行榜前，先將自己的最新分數同步回 Supabase
       await autoSave();
-
-      const { data, error } = await supabaseClient
-        .from('leaderboards')
-        .select('*')
-        .order('rank_points', { ascending: false })
-        .limit(10);
-        
-      const board = document.getElementById('pvp-board-list');
-      if(!board) return;
-      board.innerHTML = '';
-
-      if(data && data.length > 0) {
-        data.forEach((opp, idx) => {
-          board.innerHTML += `
-            <div class="item-card" style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <b>No.${idx+1} 玩家: ${opp.user_id}</b> 
-                <span style="color:#f59e0b; margin-left:8px;">🏆 ${opp.rank_points ?? 1000} 分</span>
-              </div>
-              ${opp.user_id !== currentAccount ? 
-                `<button class="btn btn-red" style="width:110px; margin:0;" onclick="challengePVP('${opp.user_id}', ${opp.rank_points ?? 1000})">離線挑戰</button>` 
-                : '<span style="color:#22c55e; font-size:0.85em; font-weight:bold;">(你自己)</span>'}
-            </div>`;
-        });
-      } else {
-        board.innerHTML = '<p style="font-size:0.85em; color:#94a3b8;">目前暫無其他玩家數據</p>';
-      }
     }
 
+    /* 排行榜與 PVP 對戰 */
     async function challengePVP(oppId, oppRank) {
       if(player.stamina < 25) return addLog('❌ 體力不足 25！');
       player.stamina -= 25;
@@ -708,22 +673,18 @@
       let total = getTotalStats();
       let myPower = total.shooting + total.speed + total.pass;
       
-      // 戰力判定
       if(myPower + (Math.random() * 30) > 180) {
         player.rank_points += 25;
         player.coins += 800;
-        addLog(`🏆 異步對戰擊敗離線玩家 [${oppId}]！天梯積分 +25 (目前: ${player.rank_points})，💰+800！`);
+        addLog(`🏆 擊敗玩家 [${oppId}]！天梯積分 +25 (目前: ${player.rank_points})，💰+800！`);
       } else {
         player.rank_points = Math.max(0, player.rank_points - 10);
         addLog(`💔 對戰玩家 [${oppId}] 失敗，積分 -10 (目前: ${player.rank_points})。`);
       }
 
-      // 1. 更新前端 UI
       updateUI();
-      // 2. 寫入 Supabase 資料庫
       await autoSave();
-      // 3. 重新刷出排行榜
-      await loadLeaderboard();
+      if(typeof loadLeaderboard === 'function') await loadLeaderboard();
     }
   </script>
 </body>
