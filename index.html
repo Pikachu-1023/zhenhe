@@ -114,7 +114,7 @@
         <button class="tab-btn" onclick="selectMinigame('massage', this)">💆 理療按摩 (恢復體力)</button>
       </div>
 
-    <!-- 3. 裝備與背包庫 (4大部位) -->
+    <!-- 3. 裝備與背包庫 (4大部位子分頁) -->
     <div id="tab-inventory" class="tab-content">
       <h2>👟 裝備部位與背包庫</h2>
       <div class="grid" style="margin-top:10px;">
@@ -127,12 +127,19 @@
           <button class="btn btn-orange" onclick="drawGacha()">🎁 裝備盲盒抽獎 (💰500)</button>
         </div>
         <div class="box">
-          <h3>背包擁有的裝備 (可選擇替換)</h3>
-          <div id="inventory-list" style="max-height:220px; overflow-y:auto;"></div>
+          <h3>🎒 背包裝備選擇</h3>
+          <!-- 裝備子分頁選單 -->
+          <div style="display:flex; gap:4px; margin: 8px 0; flex-wrap:wrap;">
+            <button class="sub-eq-btn active" onclick="filterInventory('all', this)">全部</button>
+            <button class="sub-eq-btn" onclick="filterInventory('boots', this)">👟 戰靴</button>
+            <button class="sub-eq-btn" onclick="filterInventory('kits', this)">👕 球衣</button>
+            <button class="sub-eq-btn" onclick="filterInventory('pads', this)">🛡️ 護腿板</button>
+            <button class="sub-eq-btn" onclick="filterInventory('gloves', this)">🧤 手套</button>
+          </div>
+          <div id="inventory-list" style="max-height:200px; overflow-y:auto;"></div>
         </div>
       </div>
     </div>
-
     <!-- 4. 任務系統 -->
     <div id="tab-quests" class="tab-content">
       <h2>📋 每日任務與成就</h2>
