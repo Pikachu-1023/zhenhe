@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>足球球員模擬器 Online</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; display: none; }
+    h1 { text-align: center; color: #38bdf8; margin-bottom: 20px; text-shadow: 0 0 10px rgba(56,189,248,0.3); }
+    
+    /* 登入彈窗 */
+    .auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .auth-card { background: #1e293b; border: 1px solid #334155; padding: 30px; border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .auth-card h2 { color: #38bdf8; margin-bottom: 20px; }
+    .auth-input { width: 100%; padding: 10px; margin-bottom: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; }
+    .auth-btn-group { display: flex; gap: 10px; margin-top: 10px; }
+
+    /* 遊戲介面 */
+    .status-bar { background: #1e293b; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border: 1px solid #334155; }
+    .status-item { font-size: 1.1em; font-weight: bold; }
+    .val { color: #f59e0b; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .box { background: #1e293b; border-radius: 8px; padding: 15px; border: 1px solid #334155; }
+    .box h2 { color: #38bdf8; font-size: 1.2em; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 12px; }
+    .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
+    .btn { background: #0284c7; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 8px; transition: 0.2s; }
+    .btn:hover { background: #0369a1; }
+    .btn-gacha { background: #d97706; } .btn-gacha:hover { background: #b45309; }
+    .btn-match { background: #16a34a; } .btn-match:hover { background: #15803d; }
+    .log-box { background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 12px; height: 180px; overflow-y: auto; font-family: monospace; font-size: 0.9em; color: #cbd5e1; }
+    .log-item { margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- 登入與註冊視窗 -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <h2>⚽ 玩家帳號登入</h2>
+      <input type="text" id="authUsername" class="auth-input" placeholder="請輸入帳號" />
+      <input type="password" id="authPassword" class="auth-input" placeholder="請輸入密碼" />
+      <div class="auth-btn-group">
+        <button class="btn" style="background:#16a34a;" onclick="handleAuth('login')">登入</button>
+        <button class="btn" style="background:#d97706;" onclick="handleAuth('register')">註冊</button>
+      </div>
+      <p id="authMsg" style="color:#ef4444; margin-top:12px; font-size:0.85em;"></p>
+    </div>
+  </div>
+
+  <!-- 主遊戲容器 -->
+  <div class="container" id="mainGame">
+    <h1>⚽ 職業足球員模擬器 (Online Edition)</h1>
+    <div class="status-bar">
+      <div class="status-item">帳號: <span id="p-account" class="val">-</span></div>
+      <div class="status-item">金幣: 💰<span id="p-coins" class="val">0</span></div>
+      <div class="status-item">粉絲: 👥<span id="p-fans" class="val">0</span></div>
+      <div class="status-item">體力: ⚡<span id="p-stamina" class="val">0</span>/100</div>
+    </div>
+
+    <div class="grid">
+      <!-- 能力值 -->
+      <div class="box">
+        <h2>📊 能力屬性</h2>
+        <div class="stat-row"><span>射門 (Shooting):</span> <b id="st-shooting">0</b></div>
+        <div class="stat-row"><span>傳球 (Passing):</span> <b id="st-passing">0</b></div>
+        <div class="stat-row"><span>盤球 (Dribbling):</span> <b id="st-dribbling">0</b></div>
+        <div class="stat-row"><span>防守 (Defense):</span> <b id="st-defense">0</b></div>
+        <div class="stat-row"><span>力量 (Physical):</span> <b id="st-physical">0</b></div>
+        <div class="stat-row"><span>速度 (Speed):</span> <b id="st-speed">0</b></div>
+      </div>
+
+      <!-- 裝備 -->
+      <div class="box">
+        <h2>👟 配戴裝備</h2>
+        <div class="stat-row"><span>戰靴:</span> <b id="eq-boots" style="color:#38bdf8;">無</b></div>
+        <div class="stat-row"><span>球衣:</span> <b id="eq-jersey" style="color:#38bdf8;">無</b></div>
+        <div class="stat-row"><span>護具:</span> <b id="eq-pads" style="color:#38bdf8;">無</b></div>
+        <button class="btn btn-gacha" onclick="drawGacha()">🎁 裝備盲盒抽獎 (500 金幣)</button>
+      </div>
+
+      <!-- 特訓與副業 -->
+      <div class="box">
+        <h2>🏋️ 特訓與副業經營</h2>
+        <button class="btn" onclick="train('shooting')">🎯 射門特訓 (耗體 20, 射門+2)</button>
+        <button class="btn" onclick="train('speed')">⚡ 折返跑爆發 (耗體 20, 速度+2)</button>
+        <button class="btn" onclick="train('dribbling')">🌀 盤球過人 (耗體 20, 盤球+2)</button>
+        <button class="btn" style="background:#8b5cf6;" onclick="doSideJob()">📺 社群直播/商業拍攝 (+💰400, +👥50)</button>
+        <button class="btn" style="background:#64748b;" onclick="rest()">💤 充足休息 (回復 50 體力)</button>
+      </div>
+
+      <!-- 比賽賽事 -->
+      <div class="box">
+        <h2>⚽ 賽事挑戰</h2>
+        <button class="btn btn-match" onclick="playMatch('地區聯賽熱身賽', 70)">🏟️ 挑戰: 地區聯賽 (評分 70)</button>
+        <button class="btn btn-match" onclick="playMatch('頂級盃賽小組賽', 82)">🏆 挑戰: 頂級盃賽 (評分 82)</button>
+        <button class="btn" style="background:#0f766e; margin-top:15px;" onclick="saveToCloud()">☁️ 儲存存檔至雲端</button>
+      </div>
+    </div>
+
+    <!-- 動態訊息 -->
+    <div class="box">
+      <h2>📜 動態訊息日誌</h2>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
+  <script>
+    // 請替換為你 Supabase 的 Project URL 與 Public Key
+    const SUPABASE_URL = 'https://ykdojthszgipqbqroccu.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_KXokby_l71d1yZ69MDJgew_L0Ce1YKH';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentAccount = null;
+    let player = null;
+
+    const gachaPool = [
+      { name: '刺客高階戰靴 (SSR)', type: 'boots', boost: { speed: 8, shooting: 5 } },
+      { name: '黃金戰甲球衣 (SR)', type: 'jersey', boost: { physical: 6 } },
+      { name: '輕量護腿板 (R)', type: 'pads', boost: { defense: 4 } },
+      { name: '訓練普通鞋 (N)', type: 'boots', boost: { speed: 2 } }
+    ];
+
+    async function handleAuth(type) {
+      const u = document.getElementById('authUsername').value.trim();
+      const p = document.getElementById('authPassword').value.trim();
+      const msg = document.getElementById('authMsg');
+      if (!u || !p) { msg.innerText = '請輸入帳號與密碼！'; return; }
+
+      if (type === 'register') {
+        const { data, error } = await supabaseClient.from('accounts').insert([{ username: u, password: p }]);
+        if (error) { msg.innerText = '註冊失敗：帳號已被使用！'; return; }
+        
+        // 建立初始化角色
+        await supabaseClient.from('players').insert([{
+          user_id: u,
+          coins: 2000,
+          fans: 100,
+          stamina: 100,
+          stats: { shooting: 75, passing: 70, dribbling: 72, defense: 50, physical: 70, speed: 78 },
+          equipment: { boots: null, jersey: null, pads: null }
+        }]);
+        msg.style.color = '#22c55e';
+        msg.innerText = '註冊成功！請直接點擊「登入」。';
+      } else {
+        const { data, error } = await supabaseClient.from('accounts').select('*').eq('username', u).eq('password', p);
+        if (error || data.length === 0) { msg.innerText = '帳號或密碼錯誤！'; return; }
+        
+        currentAccount = u;
+        await loadPlayerData();
+        document.getElementById('authOverlay').style.display = 'none';
+        document.getElementById('mainGame').style.display = 'block';
+      }
+    }
+
+    async function loadPlayerData() {
+      const { data } = await supabaseClient.from('players').select('*').eq('user_id', currentAccount);
+      if (data && data.length > 0) {
+        player = data[0];
+        document.getElementById('p-account').innerText = currentAccount;
+        updateUI();
+        addLog(`✅ 成功登入帳號 [${currentAccount}]，已載入雲端進度！`);
+      }
+    }
+
+    function addLog(msg) {
+      const box = document.getElementById('logBox');
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      box.prepend(item);
+    }
+
+    function updateUI() {
+      document.getElementById('p-coins').innerText = player.coins;
+      document.getElementById('p-fans').innerText = player.fans;
+      document.getElementById('p-stamina').innerText = player.stamina;
+
+      for (let s in player.stats) {
+        if (document.getElementById('st-' + s)) document.getElementById('st-' + s).innerText = player.stats[s];
+      }
+
+      document.getElementById('eq-boots').innerText = player.equipment.boots ? player.equipment.boots.name : '無';
+      document.getElementById('eq-jersey').innerText = player.equipment.jersey ? player.equipment.jersey.name : '無';
+      document.getElementById('eq-pads').innerText = player.equipment.pads ? player.equipment.pads.name : '無';
+    }
+
+    function train(type) {
+      if (player.stamina < 20) { addLog('❌ 體力不足！請先休息。'); return; }
+      player.stamina -= 20;
+      player.stats[type] += 2;
+      addLog(`🏋️ 完成特訓！${type} 屬性增加 2。`);
+      updateUI();
+    }
+
+    function rest() {
+      player.stamina = Math.min(100, player.stamina + 50);
+      addLog('💤 充分休息，體力恢復 50 點。');
+      updateUI();
+    }
+
+    function doSideJob() {
+      player.coins += 400;
+      player.fans += 50;
+      addLog('📺 完成拍攝！獲得 💰400 金幣與 👥50 粉絲。');
+      updateUI();
+    }
+
+    function drawGacha() {
+      if (player.coins < 500) { addLog('❌ 金幣不足 500！'); return; }
+      player.coins -= 500;
+      const item = gachaPool[Math.floor(Math.random() * gachaPool.length)];
+      player.equipment[item.type] = item;
+      for (let b in item.boost) { player.stats[b] += item.boost[b]; }
+      addLog(`🎁 獲得裝備：【${item.name}】！`);
+      updateUI();
+    }
+
+    async function playMatch(oppName, oppRating) {
+      if (player.stamina < 30) { addLog('❌ 體力不足 30，無法參賽！'); return; }
+      player.stamina -= 30;
+
+      let myOverall = (player.stats.shooting + player.stats.passing + player.stats.speed + player.stats.dribbling) / 4;
+      let myScore = Math.floor(Math.random() * (myOverall / 20));
+      let oppScore = Math.floor(Math.random() * (oppRating / 20));
+      let result = 'DRAW';
+      let prize = 300;
+
+      if (myScore > oppScore) { result = 'WIN'; prize = 800; player.fans += 100; }
+      else if (myScore < oppScore) { result = 'LOSS'; prize = 150; }
+
+      player.coins += prize;
+      addLog(`⚽ 比賽 [${oppName}] 結束：${myScore} - ${oppScore} (${result})，獲得 💰${prize}。`);
+      updateUI();
+
+      await supabaseClient.from('matches').insert([{
+        user_id: currentAccount,
+        opponent_name: oppName,
+        player_score: myScore,
+        opponent_score: oppScore,
+        match_result: result,
+        earned_coins: prize
+      }]);
+    }
+
+    async function saveToCloud() {
+      const { error } = await supabaseClient.from('players').upsert([{
+        user_id: currentAccount,
+        coins: player.coins,
+        fans: player.fans,
+        stamina: player.stamina,
+        stats: player.stats,
+        equipment: player.equipment
+      }]);
+      if (!error) addLog('✅ 進度已成功儲存至雲端資料庫！');
+    }
+  </script>
+</body>
+</html>
