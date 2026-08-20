@@ -224,6 +224,7 @@
     /* --- 帳號登入與註冊修復邏輯 (完全防呆校正版) --- */
     /* --- 帳號登入與註冊（防止多筆重複資料崩潰版） --- */
     /* --- 帳號登入與註冊（畫面防錯切換版） --- */
+    /* --- 帳號登入與註冊（匹配 HTML 版本） --- */
     async function handleAuth(type) {
       const u = document.getElementById('authUsername')?.value?.trim();
       const p = document.getElementById('authPassword')?.value?.trim();
@@ -289,11 +290,11 @@
           currentAccount = u;
           await loadData(u);
 
-          // 5. 切換遊戲主畫面（加入防錯判斷，避免 DOM 找不到跳錯）
-          const authScreen = document.getElementById('auth-screen');
-          const mainGame = document.getElementById('main-game');
+          // 5. 切換遊戲主畫面 (正確對應 id="authOverlay" 與 id="mainGame")
+          const authOverlay = document.getElementById('authOverlay');
+          const mainGame = document.getElementById('mainGame');
 
-          if (authScreen) authScreen.style.display = 'none';
+          if (authOverlay) authOverlay.style.display = 'none';
           if (mainGame) mainGame.style.display = 'block';
 
           if(typeof updateUI === 'function') updateUI();
