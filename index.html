@@ -221,6 +221,7 @@
 }
 
     /* --- 帳號登入與註冊修復邏輯 --- */
+    /* --- 帳號登入與註冊修復邏輯 (完全防呆校正版) --- */
     async function handleAuth(type) {
       const u = document.getElementById('authUsername').value.trim();
       const p = document.getElementById('authPassword').value.trim();
@@ -250,7 +251,11 @@
           };
 
           await supabaseClient.from('players').insert([defaultPlayer]);
-          await supabaseClient.from('leaderboards').upsert([{ user_id: u, rank_points: 1000 }], { onConflict: 'user_id' });
+          
+          // 嘗試初始化排行榜 (若失敗不阻斷註冊)
+          try {
+            await supabaseClient.from('leaderboards').insert([{ user_id: u, rank_points: 1000 }]);
+          } catch(e) { console.log('排行榜初始化跳過:', e); }
 
           msg.innerText = '🎉 註冊成功！請點擊「登入」。';
         } else {
@@ -282,7 +287,7 @@
       }
     }
 
-    /* --- 載入雲端玩家數據 --- */
+    /* --- 載入雲端玩家數據 (安全防護版) --- */
     async function loadData(username) {
       const { data, error } = await supabaseClient
         .from('players')
@@ -299,7 +304,7 @@
           pve_stage: data.pve_stage ?? 1,
           stats: data.detailed_stats || { shooting: 10, pass: 10, dribble: 10, fk: 10, speed: 10, acc: 10, stamina_max: 100, str: 10, def: 10, gk: 10 },
           equipment: data.full_equipment || { boots: null, kits: null, pads: null, gloves: null },
-          inventory: data.inventory || [],
+          inventory: Array.isArray(data.inventory) ? data.inventory : [],
           quests: data.quest_progress || { train: 0, gacha: 0, pvp: 0 }
         };
         if(typeof fixInventoryUIDs === 'function') fixInventoryUIDs();
