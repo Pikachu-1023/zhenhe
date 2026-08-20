@@ -106,21 +106,13 @@
     </div>
 
     <!-- 2. 特訓與理療 5 大小遊戲 -->
-    <div id="tab-training" class="tab-content">
-      <h2>🎮 5 大互動特訓與理療小遊戲</h2>
-      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-        <button class="tab-btn active" onclick="selectMinigame('shooting')">🎯 射門點擊特訓</button>
-        <button class="tab-btn" onclick="selectMinigame('pass')">⚽ 傳球記憶特訓</button>
-        <button class="tab-btn" onclick="selectMinigame('dribble')">🏃 盤球避障特訓</button>
-        <button class="tab-btn" onclick="selectMinigame('fk')">📐 自由球時機特訓</button>
-        <button class="tab-btn btn-orange" style="color:white;" onclick="selectMinigame('massage')">💆 理療按摩 (恢復體力)</button>
+    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <button class="tab-btn active" onclick="selectMinigame('shooting', this)">🎯 射門點擊特訓</button>
+        <button class="tab-btn" onclick="selectMinigame('pass', this)">⚽ 傳球記憶特訓</button>
+        <button class="tab-btn" onclick="selectMinigame('dribble', this)">🏃 盤球避障特訓</button>
+        <button class="tab-btn" onclick="selectMinigame('fk', this)">📐 自由球時機特訓</button>
+        <button class="tab-btn" onclick="selectMinigame('massage', this)">💆 理療按摩 (恢復體力)</button>
       </div>
-
-      <p id="game-desc" style="font-size:0.85em; color:#94a3b8; margin-top:10px;">點擊遊戲開始按鈕進行練習。</p>
-      <div id="game-stage">
-        <button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 開始挑戰</button>
-      </div>
-    </div>
 
     <!-- 3. 裝備與背包庫 (4大部位) -->
     <div id="tab-inventory" class="tab-content">
@@ -325,9 +317,16 @@
 
     /* 5 大特訓與理療小遊戲切換與執行 */
     /* --- 5 大互動小遊戲系統修復 --- */
-    function selectMinigame(mode) {
+    function selectMinigame(mode, btn) {
       selectedGameMode = mode;
       if(gameTimer) clearInterval(gameTimer);
+
+      // 切換按鈕高亮樣式
+      if(btn) {
+        document.querySelectorAll('#tab-training .tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+
       const stage = document.getElementById('game-stage');
       stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 開始挑戰</button>`;
       
@@ -340,7 +339,6 @@
       };
       document.getElementById('game-desc').innerText = descs[mode];
     }
-
     function runSelectedMinigame() {
       if(selectedGameMode !== 'massage' && player.stamina < 15) return addLog('❌ 體力不足 15！');
       if(selectedGameMode !== 'massage') player.stamina -= 15;
