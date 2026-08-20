@@ -282,7 +282,29 @@
         updateUI();
       }
     }
+/* --- 雲端強制自動儲存 --- */
+    async function autoSave() {
+      if (!currentAccount) return;
+      
+      const { error } = await supabaseClient
+        .from('players')
+        .update({
+          rank_points: player.rank_points,
+          coins: player.coins,
+          diamonds: player.diamonds,
+          stamina: player.stamina,
+          pve_stage: player.pve_stage,
+          detailed_stats: player.stats,
+          full_equipment: player.equipment,
+          inventory: player.inventory,
+          quest_progress: player.quests
+        })
+        .eq('user_id', currentAccount);
 
+      if (error) {
+        console.error('雲端同步失敗:', error);
+      }
+    }
     function addLog(msg) {
       const box = document.getElementById('logBox');
       box.innerHTML = `<div style="margin-bottom:2px;">[${new Date().toLocaleTimeString()}] ${msg}</div>` + box.innerHTML;
