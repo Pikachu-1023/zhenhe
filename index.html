@@ -223,29 +223,39 @@
     /* --- 帳號登入與註冊修復邏輯 --- */
     /* --- 帳號登入與註冊修復邏輯 (完全防呆校正版) --- */
     /* --- 帳號登入與註冊（防止多筆重複資料崩潰版） --- */
+    /* --- 帳號登入與註冊（畫面防錯切換版） --- */
     async function handleAuth(type) {
-      const u = document.getElementById('authUsername').value.trim();
-      const p = document.getElementById('authPassword').value.trim();
+      const u = document.getElementById('authUsername')?.value?.trim();
+      const p = document.getElementById('authPassword')?.value?.trim();
       const msg = document.getElementById('authMsg');
-      if(!u || !p) return msg.innerText = '⚠️ 請輸入帳號與密碼！';
+      if(!u || !p) {
+        if(msg) msg.innerText = '⚠️ 請輸入帳號與密碼！';
+        return;
+      }
 
-      msg.innerText = '連線處理中...';
+      if(msg) msg.innerText = '連線處理中...';
 
       try {
         if(type === 'register') {
-          // 1. 檢查帳號是否存在
+          // 1. 檢查帳號
           const { data: existing } = await supabaseClient
             .from('accounts')
             .select('username')
             .eq('username', u);
 
-          if(existing && existing.length > 0) return msg.innerText = '❌ 帳號已存在！';
+          if(existing && existing.length > 0) {
+            if(msg) msg.innerText = '❌ 帳號已存在！';
+            return;
+          }
 
           // 2. 註冊帳號
           const { error: accErr } = await supabaseClient.from('accounts').insert([{ username: u, password: p }]);
-          if(accErr) return msg.innerText = '❌ 註冊失敗，請重試！';
+          if(accErr) {
+            if(msg) msg.innerText = '❌ 註冊失敗，請重試！';
+            return;
+          }
 
-          // 3. 初始化玩家資料
+          // 3. 初始化玩家數據
           const defaultPlayer = {
             user_id: u,
             coins: 2000,
@@ -262,9 +272,9 @@
           await supabaseClient.from('players').insert([defaultPlayer]);
           supabaseClient.from('leaderboards').insert([{ user_id: u, rank_points: 1000 }]).then();
 
-          msg.innerText = '🎉 註冊成功！請點擊「登入」。';
+          if(msg) msg.innerText = '🎉 註冊成功！請點擊「登入」。';
         } else {
-          // 4. 驗證登入（改用 select 避免多筆重複資料導致程式崩潰）
+          // 4. 驗證登入
           const { data, error } = await supabaseClient
             .from('accounts')
             .select('*')
@@ -272,25 +282,28 @@
             .eq('password', p);
 
           if(error || !data || data.length === 0) {
-            return msg.innerText = '❌ 帳號或密碼錯誤！';
+            if(msg) msg.innerText = '❌ 帳號或密碼錯誤！';
+            return;
           }
 
           currentAccount = u;
           await loadData(u);
 
-          // 5. 切換遊戲主畫面
-          document.getElementById('auth-screen').style.display = 'none';
-          document.getElementById('main-game').style.display = 'block';
-          
+          // 5. 切換遊戲主畫面（加入防錯判斷，避免 DOM 找不到跳錯）
+          const authScreen = document.getElementById('auth-screen');
+          const mainGame = document.getElementById('main-game');
+
+          if (authScreen) authScreen.style.display = 'none';
+          if (mainGame) mainGame.style.display = 'block';
+
           if(typeof updateUI === 'function') updateUI();
           if(typeof loadLeaderboard === 'function') loadLeaderboard();
         }
       } catch (err) {
         console.error('Auth Error:', err);
-        msg.innerText = `❌ 錯誤：${err.message || '連線失敗'}`;
+        if(msg) msg.innerText = `❌ 錯誤：${err.message || '連線失敗'}`;
       }
     }
-
     /* --- 載入雲端玩家數據 (安全防護版) --- */
     async function loadData(username) {
       const { data, error } = await supabaseClient
