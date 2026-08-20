@@ -567,6 +567,7 @@
       }
 
       filtered.forEach((item) => {
+        // 精確比對 unique id (uid)，同部位一次只會有一件顯示「脫下」
         let isEquipped = player.equipment[item.type]?.uid === item.uid;
         list.innerHTML += `
           <div class="item-card" style="display:flex; justify-content:space-between; align-items:center;">
@@ -574,8 +575,8 @@
               <b>${item.name}</b>
               <div style="font-size:0.75em; color:#94a3b8;">${getItemStatDesc(item)}</div>
             </div>
-            <button class="btn ${isEquipped ? 'btn-orange' : 'btn-green'}" style="width:70px; margin:0;" onclick="equip('${item.uid}')">
-              ${isEquipped ? '已穿上' : '裝備'}
+            <button class="btn ${isEquipped ? 'btn-orange' : 'btn-green'}" style="width:75px; margin:0;" onclick="equip('${item.uid}')">
+              ${isEquipped ? '脫下' : '穿上'}
             </button>
           </div>`;
       });
@@ -588,11 +589,19 @@
 
     function equip(uid) {
       const item = player.inventory.find(i => i.uid == uid);
-      if(item) {
+      if(!item) return;
+
+      // 若已穿著此裝備則脫下，否則替換為新裝備
+      if (player.equipment[item.type]?.uid === item.uid) {
+        player.equipment[item.type] = null;
+        addLog(`👟 已卸下裝備【${item.name}】！`);
+      } else {
         player.equipment[item.type] = item;
-        addLog(`👟 成功裝備【${item.name}】！`);
-        updateUI();
+        addLog(`👟 成功穿上裝備【${item.name}】！`);
       }
+
+      updateUI();
+      if(typeof autoSave === 'function') autoSave();
     }
 
     /* 任務系統 */
