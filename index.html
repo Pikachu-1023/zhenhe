@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>職業足球員模擬器 RPG Online</title>
+  <title>職業足球員模擬器 Pro Online</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background-color: #0f172a; color: #f8fafc; padding: 15px; }
-    .container { max-width: 1000px; margin: 0 auto; display: none; }
+    .container { max-width: 1050px; margin: 0 auto; display: none; }
     h1 { text-align: center; color: #38bdf8; margin-bottom: 15px; }
     
     /* 登入彈窗 */
@@ -17,30 +17,37 @@
     .auth-input { width: 100%; padding: 8px; margin-bottom: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 4px; }
 
     /* 頂部狀態列 */
-    .status-bar { background: #1e293b; padding: 12px; border-radius: 8px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: space-between; border: 1px solid #334155; margin-bottom: 15px; }
+    .status-bar { background: #1e293b; padding: 12px; border-radius: 8px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; border: 1px solid #334155; margin-bottom: 15px; }
     .val { color: #f59e0b; font-weight: bold; }
     
-    /* 分頁標籤欄 */
-    .nav-tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 2px solid #334155; padding-bottom: 8px; }
-    .tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    /* 分頁標籤列 */
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 2px solid #334155; padding-bottom: 8px; overflow-x: auto; }
+    .tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap; font-size: 0.9em; }
     .tab-btn.active { background: #0284c7; color: white; border-color: #38bdf8; }
 
     /* 分頁內容 */
     .tab-content { display: none; background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #334155; }
     .tab-content.active { display: block; }
 
-    /* 訓練小遊戲小舞台 */
-    #game-stage { width: 100%; height: 250px; background: #064e3b; border: 2px solid #10b981; border-radius: 8px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-    .target-ball { width: 50px; height: 50px; background: #f59e0b; border-radius: 50%; position: absolute; cursor: pointer; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2em; box-shadow: 0 0 10px #f59e0b; }
+    /* 網格與卡片 */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+    .box { background: #0f172a; border-radius: 8px; padding: 12px; border: 1px solid #334155; }
+    .box h3 { color: #38bdf8; font-size: 1em; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+    .stat-row { display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 4px; }
 
-    /* 背包與裝備網格 */
-    .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
-    .item-card { background: #0f172a; border: 1px solid #334155; padding: 10px; border-radius: 6px; font-size: 0.85em; }
+    /* 遊戲小舞台 */
+    #game-stage { width: 100%; height: 260px; background: #064e3b; border: 2px solid #10b981; border-radius: 8px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; margin-top: 10px; }
+    .target-ball { width: 45px; height: 45px; background: #f59e0b; border-radius: 50%; position: absolute; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 1.2em; box-shadow: 0 0 10px #f59e0b; user-select: none; }
 
-    /* 通用按鈕 */
-    .btn { background: #0284c7; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; }
+    /* 按鈕 */
+    .btn { background: #0284c7; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 6px; font-size: 0.85em; }
     .btn:hover { opacity: 0.9; }
-    .log-box { background: #020617; border: 1px solid #334155; border-radius: 6px; padding: 10px; height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.8em; color: #cbd5e1; margin-top: 15px; }
+    .btn-green { background: #16a34a; }
+    .btn-orange { background: #d97706; }
+    .btn-red { background: #dc2626; }
+    
+    .item-card { background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 0.85em; }
+    .log-box { background: #020617; border: 1px solid #334155; border-radius: 6px; padding: 10px; height: 130px; overflow-y: auto; font-family: monospace; font-size: 0.8em; color: #cbd5e1; margin-top: 15px; }
   </style>
 </head>
 <body>
@@ -51,8 +58,8 @@
       <h2>⚽ 足球員職涯登入</h2>
       <input type="text" id="authUsername" class="auth-input" placeholder="帳號" />
       <input type="password" id="authPassword" class="auth-input" placeholder="密碼" />
-      <button class="btn" style="background:#16a34a;" onclick="handleAuth('login')">登入</button>
-      <button class="btn" style="background:#d97706;" onclick="handleAuth('register')">註冊帳號</button>
+      <button class="btn btn-green" onclick="handleAuth('login')">登入</button>
+      <button class="btn btn-orange" onclick="handleAuth('register')">註冊帳號</button>
       <p id="authMsg" style="color:#ef4444; margin-top:10px; font-size:0.8em;"></p>
     </div>
   </div>
@@ -60,69 +67,103 @@
   <div class="container" id="mainGame">
     <h1>⚽ 職業足球員模擬器 Pro</h1>
     
-    <!-- 資訊條 -->
+    <!-- 頂部資訊條 -->
     <div class="status-bar">
       <div>球員: <span id="p-account" class="val">-</span></div>
+      <div>天梯積分: 🏆<span id="p-rank" class="val">1000</span></div>
       <div>金幣: 💰<span id="p-coins" class="val">0</span></div>
+      <div>鑽石: 💎<span id="p-diamonds" class="val">0</span></div>
       <div>體力: ⚡<span id="p-stamina" class="val">100</span>/100</div>
-      <div>射門能力: <span id="s-shooting" class="val">0</span></div>
-      <div>速度能力: <span id="s-speed" class="val">0</span></div>
       <div id="saveStatus" style="font-size:0.8em; color:#22c55e;">☁️ 自動同步中</div>
     </div>
 
-    <!-- 分頁選單 -->
+    <!-- 分頁導覽欄 -->
     <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('tab-home', this)">🏠 職涯主頁</button>
-      <button class="tab-btn" onclick="switchTab('tab-training', this)">🎯 射門特訓小遊戲</button>
+      <button class="tab-btn active" onclick="switchTab('tab-home', this)">🏠 主頁與屬性</button>
+      <button class="tab-btn" onclick="switchTab('tab-training', this)">🎮 特訓與理療小遊戲</button>
       <button class="tab-btn" onclick="switchTab('tab-inventory', this)">🎒 裝備與背包</button>
-      <button class="tab-btn" onclick="switchTab('tab-quests', this)">📋 任務系統</button>
-      <button class="tab-btn" onclick="switchTab('tab-pvp', this)">🏟️ 線上玩家 PVP 對戰</button>
+      <button class="tab-btn" onclick="switchTab('tab-quests', this)">📋 豐富任務</button>
+      <button class="tab-btn" onclick="switchTab('tab-pve', this)">🏆 PVE 闖關 (20關)</button>
+      <button class="tab-btn" onclick="switchTab('tab-pvp', this)">🏟️ 異步 PVP 與排行榜</button>
     </div>
 
-    <!-- 1. 職涯主頁 -->
+    <!-- 1. 主頁與屬性面板 -->
     <div id="tab-home" class="tab-content active">
-      <h2>📊 球員總覽</h2>
-      <p style="margin-top:10px;">請透過「射門特訓小遊戲」提升實力，並於「任務系統」與「線上 PVP」賺取獎金與聲望！</p>
-      <button class="btn" style="background:#64748b; margin-top:15px;" onclick="rest()">💤 理療休息 (體力+50)</button>
-    </div>
-
-    <!-- 2. 訓練小遊戲 -->
-    <div id="tab-training" class="tab-content">
-      <h2>⚽ 反應射門特訓小遊戲</h2>
-      <p style="font-size:0.85em; color:#94a3b8; margin-bottom:10px;">規則：點擊「開始遊戲」後，目標球會在球場內隨機出現，請在 10 秒內快速點擊目標球！每次成功點擊加 1 分。</p>
-      <div id="game-stage">
-        <button id="start-game-btn" class="btn" style="width:150px; background:#10b981;" onclick="startShootingGame()">🎮 開始射門特訓</button>
-      </div>
-    </div>
-
-    <!-- 3. 裝備與背包 -->
-    <div id="tab-inventory" class="tab-content">
-      <h2>👟 裝備庫與抽獎</h2>
-      <button class="btn" style="background:#d97706; width:200px;" onclick="drawGacha()">🎁 盲盒抽獎 (💰500)</button>
-      <h3 style="margin-top:15px; font-size:1em; color:#38bdf8;">目前配戴裝備：</h3>
-      <div style="font-size:0.9em; margin:5px 0;">戰靴: <b id="eq-boots">無</b></div>
-
-      <h3 style="margin-top:15px; font-size:1em; color:#38bdf8;">背包擁有物品：</h3>
-      <div class="item-grid" id="inventory-list"></div>
-    </div>
-
-    <!-- 4. 任務系統 -->
-    <div id="tab-quests" class="tab-content">
-      <h2>📋 每日職涯任務</h2>
-      <div style="margin-top:10px;">
-        <div class="item-card">
-          <b>🎯 訓練達人：完成 2 次射門小遊戲</b>
-          <p>進度: <span id="q1-progress">0</span>/2</p>
-          <button class="btn" style="background:#16a34a;" onclick="claimQuest(1)">領取獎勵 (💰800)</button>
+      <h2>📊 球員總覽 (基礎屬性 + 裝備加成)</h2>
+      <div class="grid" style="margin-top:10px;">
+        <div class="box">
+          <h3>【技術屬性】</h3>
+          <div class="stat-row"><span>射門 / 傳球:</span><b><span id="s-shooting">0</span> / <span id="s-pass">0</span></b></div>
+          <div class="stat-row"><span>盤球 / 自由球:</span><b><span id="s-dribble">0</span> / <span id="s-fk">0</span></b></div>
+        </div>
+        <div class="box">
+          <h3>【身體與心智】</h3>
+          <div class="stat-row"><span>速度 / 爆發力:</span><b><span id="s-speed">0</span> / <span id="s-acc">0</span></b></div>
+          <div class="stat-row"><span>體力上限 / 對抗:</span><b><span id="s-stamina_max">0</span> / <span id="s-str">0</span></b></div>
+          <div class="stat-row"><span>防守意識 / 撲救:</span><b><span id="s-def">0</span> / <span id="s-gk">0</span></b></div>
         </div>
       </div>
     </div>
 
-    <!-- 5. PVP 對戰 -->
+    <!-- 2. 特訓與理療 5 大小遊戲 -->
+    <div id="tab-training" class="tab-content">
+      <h2>🎮 5 大互動特訓與理療小遊戲</h2>
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <button class="tab-btn active" onclick="selectMinigame('shooting')">🎯 射門點擊特訓</button>
+        <button class="tab-btn" onclick="selectMinigame('pass')">⚽ 傳球記憶特訓</button>
+        <button class="tab-btn" onclick="selectMinigame('dribble')">🏃 盤球避障特訓</button>
+        <button class="tab-btn" onclick="selectMinigame('fk')">📐 自由球時機特訓</button>
+        <button class="tab-btn btn-orange" style="color:white;" onclick="selectMinigame('massage')">💆 理療按摩 (恢復體力)</button>
+      </div>
+
+      <p id="game-desc" style="font-size:0.85em; color:#94a3b8; margin-top:10px;">點擊遊戲開始按鈕進行練習。</p>
+      <div id="game-stage">
+        <button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 開始挑戰</button>
+      </div>
+    </div>
+
+    <!-- 3. 裝備與背包庫 (4大部位) -->
+    <div id="tab-inventory" class="tab-content">
+      <h2>👟 裝備部位與背包庫</h2>
+      <div class="grid" style="margin-top:10px;">
+        <div class="box">
+          <h3>已裝備 4 大部位</h3>
+          <div class="stat-row"><span>戰靴:</span><b id="eq-boots">無</b></div>
+          <div class="stat-row"><span>球衣短褲:</span><b id="eq-kits">無</b></div>
+          <div class="stat-row"><span>護腿板:</span><b id="eq-pads">無</b></div>
+          <div class="stat-row"><span>門將手套:</span><b id="eq-gloves">無</b></div>
+          <button class="btn btn-orange" onclick="drawGacha()">🎁 裝備盲盒抽獎 (💰500)</button>
+        </div>
+        <div class="box">
+          <h3>背包擁有的裝備 (可選擇替換)</h3>
+          <div id="inventory-list" style="max-height:220px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 任務系統 -->
+    <div id="tab-quests" class="tab-content">
+      <h2>📋 每日任務與成就</h2>
+      <div style="margin-top:10px;" id="quest-list"></div>
+    </div>
+
+    <!-- 5. PVE 闖關 (20關) -->
+    <div id="tab-pve" class="tab-content">
+      <h2>🏆 20 關 PVE 職涯挑戰</h2>
+      <p style="font-size:0.85em; color:#94a3b8; margin-bottom:10px;">目前進度：第 <span id="pve-stage-num" class="val">1</span> / 20 關</p>
+      <div id="pve-list" class="grid"></div>
+    </div>
+
+    <!-- 6. 異步 PVP 與排行榜 -->
     <div id="tab-pvp" class="tab-content">
-      <h2>🏟️ 雲端玩家配對對戰</h2>
-      <button class="btn" style="background:#8b5cf6; margin-bottom:15px;" onclick="loadPVPList()">🔄 整理雲端線上對手</button>
-      <div id="pvp-list" class="item-grid"></div>
+      <h2>🏟️ 離線異步 PVP 與全服天梯榜</h2>
+      <button class="btn btn-green" style="width:180px; margin-bottom:10px;" onclick="loadLeaderboard()">🔄 刷新全服排行榜</button>
+      <div class="grid">
+        <div class="box">
+          <h3>🏆 全服天梯排行榜 (離線隨時挑戰)</h3>
+          <div id="pvp-board-list"></div>
+        </div>
+      </div>
     </div>
 
     <div class="log-box" id="logBox"></div>
@@ -130,25 +171,26 @@
 
   <script>
     const SUPABASE_URL = 'https://ykdojthszgipqbqroccu.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_KXokby_l71d1yZ69MDJgew_L0Ce1YKH'; // 請在此貼上你的 Key
+    const SUPABASE_KEY = 'sb_publishable_KXokby_l71d1yZ69MDJgew_L0Ce1YKH'; // 請貼上你的 Key
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentAccount = null;
-    let gameTimer = null;
-    let gameScore = 0;
-    
+    let selectedGameMode = 'shooting';
+    let gameTimer = null, gameScore = 0;
+
     let player = {
-      coins: 2000, stamina: 100,
-      stats: { shooting: 70, speed: 70 },
-      equipment: { boots: null },
+      coins: 2000, diamonds: 50, stamina: 100, rank_points: 1000, pve_stage: 1,
+      stats: { shooting: 70, pass: 70, dribble: 68, fk: 60, speed: 75, acc: 72, stamina_max: 100, str: 70, def: 50, gk: 50 },
+      equipment: { boots: null, kits: null, pads: null, gloves: null },
       inventory: [],
-      quests: { train_count: 0, q1_claimed: false }
+      quests: { train: 0, pvp: 0, gacha: 0, claimed: [] }
     };
 
     const gachaPool = [
-      { id: 1, name: '水星刺客戰靴', type: 'boots', boost: 8 },
-      { id: 2, name: '黃金龍紋戰靴', type: 'boots', boost: 12 },
-      { id: 3, name: '輕型訓練鞋', type: 'boots', boost: 3 }
+      { id:'b1', name:'水星刺客戰靴 (SSR)', type:'boots', boost:{ shooting:12, speed:8 } },
+      { id:'k1', name:'耐力優化球衣 (SR)', type:'kits', boost:{ stamina_max:20, str:6 } },
+      { id:'p1', name:'碳纖維護腿板 (R)', type:'pads', boost:{ def:8 } },
+      { id:'g1', name:'職業門將手套 (SSR)', type:'gloves', boost:{ gk:15 } }
     ];
 
     function switchTab(tabId, btn) {
@@ -168,7 +210,7 @@
         const { error } = await supabaseClient.from('accounts').insert([{ username: u, password: p }]);
         if(error) return msg.innerText = '帳號已存在';
         await supabaseClient.from('players').insert([{ user_id: u }]);
-        msg.style.color = '#22c55e'; msg.innerText = '註冊成功！請登入。';
+        msg.style.color = '#22c55e'; msg.innerText = '註冊成功！請點登入。';
       } else {
         const { data } = await supabaseClient.from('accounts').select('*').eq('username', u).eq('password', p);
         if(!data || data.length === 0) return msg.innerText = '帳密錯誤';
@@ -184,153 +226,272 @@
       if(data && data[0]) {
         let d = data[0];
         if(d.detailed_stats) player.stats = d.detailed_stats;
-        if(d.inventory) player.inventory = d.inventory;
         if(d.full_equipment) player.equipment = d.full_equipment;
+        if(d.inventory) player.inventory = d.inventory;
+        if(d.quest_progress) player.quests = d.quest_progress;
         player.coins = d.coins || 2000;
+        player.diamonds = d.diamonds || 50;
+        player.rank_points = d.rank_points || 1000;
+        player.pve_stage = d.pve_stage || 1;
         document.getElementById('p-account').innerText = currentAccount;
         updateUI();
-        addLog(`✅ 成功載入玩家 [${currentAccount}] 進度！`);
+        addLog(`✅ 成功載入玩家 [${currentAccount}] 雲端存檔！`);
       }
     }
 
     function addLog(msg) {
       const box = document.getElementById('logBox');
-      box.innerHTML = `<div class="log-item">[${new Date().toLocaleTimeString()}] ${msg}</div>` + box.innerHTML;
+      box.innerHTML = `<div style="margin-bottom:2px;">[${new Date().toLocaleTimeString()}] ${msg}</div>` + box.innerHTML;
     }
 
     async function autoSave() {
       if(!currentAccount) return;
       await supabaseClient.from('players').upsert([{
-        user_id: currentAccount, coins: player.coins,
-        detailed_stats: player.stats, full_equipment: player.equipment, inventory: player.inventory
+        user_id: currentAccount, coins: player.coins, diamonds: player.diamonds,
+        rank_points: player.rank_points, pve_stage: player.pve_stage,
+        detailed_stats: player.stats, full_equipment: player.equipment,
+        inventory: player.inventory, quest_progress: player.quests
       }]);
+    }
+
+    /* 正確能力值算式：基礎值 + 裝備動態加成 */
+    function getTotalStats() {
+      let totals = { ...player.stats };
+      for(let eqKey in player.equipment) {
+        let item = player.equipment[eqKey];
+        if(item && item.boost) {
+          for(let statKey in item.boost) {
+            totals[statKey] = (totals[statKey] || 0) + item.boost[statKey];
+          }
+        }
+      }
+      return totals;
     }
 
     function updateUI() {
       document.getElementById('p-coins').innerText = player.coins;
+      document.getElementById('p-diamonds').innerText = player.diamonds;
       document.getElementById('p-stamina').innerText = player.stamina;
-      document.getElementById('s-shooting').innerText = player.stats.shooting;
-      document.getElementById('s-speed').innerText = player.stats.speed;
-      document.getElementById('eq-boots').innerText = player.equipment.boots ? player.equipment.boots.name : '無';
-      document.getElementById('q1-progress').innerText = player.quests.train_count;
+      document.getElementById('p-rank').innerText = player.rank_points;
+      document.getElementById('pve-stage-num').innerText = player.pve_stage;
 
-      // 渲染背包
-      const invList = document.getElementById('inventory-list');
-      invList.innerHTML = '';
-      player.inventory.forEach((item, idx) => {
-        invList.innerHTML += `
-          <div class="item-card">
-            <b>${item.name}</b> (射門+${item.boost})
-            <button class="btn" style="background:#10b981;" onclick="equipItem(${idx})">裝備</button>
-          </div>`;
-      });
+      const total = getTotalStats();
+      document.getElementById('s-shooting').innerText = total.shooting;
+      document.getElementById('s-pass').innerText = total.pass;
+      document.getElementById('s-dribble').innerText = total.dribble;
+      document.getElementById('s-fk').innerText = total.fk;
+      document.getElementById('s-speed').innerText = total.speed;
+      document.getElementById('s-acc').innerText = total.acc;
+      document.getElementById('s-stamina_max').innerText = total.stamina_max;
+      document.getElementById('s-str').innerText = total.str;
+      document.getElementById('s-def').innerText = total.def;
+      document.getElementById('s-gk').innerText = total.gk;
 
+      // 裝備欄顯示
+      for(let eq in player.equipment) {
+        let item = player.equipment[eq];
+        document.getElementById('eq-' + eq).innerText = item ? item.name : '無';
+      }
+
+      renderInventory();
+      renderQuests();
+      renderPVE();
       autoSave();
     }
 
-    /* 射門小遊戲邏輯 */
-    function startShootingGame() {
-      if(player.stamina < 20) return addLog('❌ 體力不足 20，無法進行特訓！');
-      player.stamina -= 20;
+    /* 5 大特訓與理療小遊戲切換與執行 */
+    function selectMinigame(mode) {
+      selectedGameMode = mode;
+      const descs = {
+        shooting: '🎯 射門特訓：10秒內點擊出現的目標球，提升射門能力。',
+        pass: '⚽ 傳球特訓：點擊精準連線傳球，提升傳球能力。',
+        dribble: '🏃 盤球特訓：左右避開障礙物，提升盤球與速度。',
+        fk: '📐 自由球特訓：抓準角度條時機，提升自由球技術。',
+        massage: '💆 理療按摩：節奏放鬆肌肉，大幅恢復體力。'
+      };
+      document.getElementById('game-desc').innerText = descs[mode];
+    }
+
+    function runSelectedMinigame() {
+      if(selectedGameMode !== 'massage' && player.stamina < 15) return addLog('❌ 體力不足 15！');
+      if(selectedGameMode !== 'massage') player.stamina -= 15;
+      
       gameScore = 0;
       const stage = document.getElementById('game-stage');
       stage.innerHTML = '';
       
-      let timeLeft = 10;
-      spawnBall();
-
-      gameTimer = setInterval(() => {
-        timeLeft--;
-        if(timeLeft <= 0) {
-          clearInterval(gameTimer);
-          stage.innerHTML = `<button id="start-game-btn" class="btn" style="width:150px; background:#10b981;" onclick="startShootingGame()">🎮 再次挑戰</button>`;
-          let gain = Math.floor(gameScore / 2);
-          player.stats.shooting += gain;
-          player.quests.train_count++;
-          addLog(`🎉 特訓結束！你在小遊戲中得分: ${gameScore}，射門能力提升 +${gain}！`);
-          updateUI();
-        }
-      }, 1000);
+      if(selectedGameMode === 'shooting' || selectedGameMode === 'massage') {
+        let timeLeft = 8;
+        spawnBall();
+        gameTimer = setInterval(() => {
+          timeLeft--;
+          if(timeLeft <= 0) {
+            clearInterval(gameTimer);
+            stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 再次挑戰</button>`;
+            if(selectedGameMode === 'shooting') {
+              let gain = Math.floor(gameScore / 2);
+              player.stats.shooting += gain;
+              player.quests.train++;
+              addLog(`🎉 射門特訓完成！得分 ${gameScore}，基礎射門 +${gain}！`);
+            } else {
+              let recover = 30 + (gameScore * 5);
+              player.stamina = Math.min(player.stats.stamina_max, player.stamina + recover);
+              addLog(`💆 理療按摩完成！恢復體力 +${recover}！`);
+            }
+            updateUI();
+          }
+        }, 1000);
+      } else {
+        // 其他特訓模式簡化結算
+        player.stats[selectedGameMode === 'pass' ? 'pass' : selectedGameMode === 'dribble' ? 'dribble' : 'fk'] += 3;
+        player.quests.train++;
+        stage.innerHTML = `<button id="start-game-btn" class="btn btn-green" style="width:160px;" onclick="runSelectedMinigame()">🎮 再次挑戰</button>`;
+        addLog(`🎉 完成 ${selectedGameMode} 特訓！對應屬性 +3！`);
+        updateUI();
+      }
     }
 
     function spawnBall() {
       const stage = document.getElementById('game-stage');
-      const oldBall = document.querySelector('.target-ball');
-      if(oldBall) oldBall.remove();
+      const old = document.querySelector('.target-ball');
+      if(old) old.remove();
 
       const ball = document.createElement('div');
       ball.className = 'target-ball';
-      ball.innerText = '⚽';
+      ball.innerText = selectedGameMode === 'massage' ? '💆' : '⚽';
       ball.style.top = Math.floor(Math.random() * 180) + 'px';
       ball.style.left = Math.floor(Math.random() * 80) + '%';
-      ball.onclick = () => {
-        gameScore++;
-        spawnBall();
-      };
+      ball.onclick = () => { gameScore++; spawnBall(); };
       stage.appendChild(ball);
     }
 
-    /* 抽獎與裝備 */
+    /* 裝備與背包系統 */
     function drawGacha() {
       if(player.coins < 500) return addLog('❌ 金幣不足 500！');
       player.coins -= 500;
+      player.quests.gacha++;
       const item = gachaPool[Math.floor(Math.random() * gachaPool.length)];
-      player.inventory.push(item);
-      addLog(`🎁 抽中裝備【${item.name}】並放入背包！`);
+      player.inventory.push({ ...item, uid: Date.now() });
+      addLog(`🎁 抽中【${item.name}】並存入背包！`);
       updateUI();
     }
 
-    function equipItem(idx) {
-      const item = player.inventory[idx];
-      player.equipment.boots = item;
-      player.stats.shooting += item.boost;
-      addLog(`👟 成功裝備【${item.name}】，射門能力增加 +${item.boost}！`);
-      updateUI();
+    function renderInventory() {
+      const list = document.getElementById('inventory-list');
+      list.innerHTML = '';
+      player.inventory.forEach((item) => {
+        list.innerHTML += `
+          <div class="item-card">
+            <b>${item.name}</b>
+            <button class="btn btn-green" onclick="equip('${item.uid}')">穿上裝備</button>
+          </div>`;
+      });
     }
 
-    /* 任務 */
-    function claimQuest(id) {
-      if(player.quests.train_count >= 2 && !player.quests.q1_claimed) {
-        player.coins += 800;
-        player.quests.q1_claimed = true;
-        addLog('💰 成功完成每日訓練任務！領取金幣 +800！');
+    function equip(uid) {
+      const item = player.inventory.find(i => i.uid == uid);
+      if(item) {
+        player.equipment[item.type] = item;
+        addLog(`👟 成功裝備【${item.name}】！`);
         updateUI();
-      } else {
-        addLog('❌ 任務尚未達成或已領取！');
       }
     }
 
-    /* PVP 線上玩家對戰 */
-    async function loadPVPList() {
-      const { data } = await supabaseClient.from('players').select('*').limit(5);
-      const list = document.getElementById('pvp-list');
-      list.innerHTML = '';
+    /* 任務系統 */
+    function renderQuests() {
+      const qList = document.getElementById('quest-list');
+      const questsData = [
+        { id:'q1', name:'完成 2 次特訓', key:'train', target:2, rewardCoins:600 },
+        { id:'q2', name:'進行 1 次抽獎', key:'gacha', target:1, rewardCoins:500 },
+        { id:'q3', name:'挑戰 1 次 PVP', key:'pvp', target:1, rewardCoins:800 }
+      ];
+      qList.innerHTML = '';
+      questsData.forEach(q => {
+        let count = player.quests[q.key] || 0;
+        let claimed = player.quests.claimed.includes(q.id);
+        qList.innerHTML += `
+          <div class="item-card">
+            <b>${q.name} (${count}/${q.target})</b> - 獎勵 💰${q.rewardCoins}
+            ${claimed ? '<b style="color:#22c55e;">[已領取]</b>' : `<button class="btn btn-orange" onclick="claimQ('${q.id}', ${q.rewardCoins}, ${count >= q.target})">領取獎勵</button>`}
+          </div>`;
+      });
+    }
+
+    function claimQ(id, coins, canClaim) {
+      if(!canClaim) return addLog('❌ 任務條件未達成！');
+      player.coins += coins;
+      player.quests.claimed.push(id);
+      addLog(`💰 成功領取任務獎勵金幣 +${coins}！`);
+      updateUI();
+    }
+
+    /* 20 關 PVE 闖關 */
+    function renderPVE() {
+      const pveBox = document.getElementById('pve-list');
+      pveBox.innerHTML = '';
+      for(let i = 1; i <= 20; i++) {
+        let isCurrent = i === player.pve_stage;
+        pveBox.innerHTML += `
+          <div class="box" style="${isCurrent ? 'border-color:#f59e0b;' : ''}">
+            <h3>第 ${i} 關 ${i < player.pve_stage ? '✅ 已通關' : ''}</h3>
+            <p style="font-size:0.8em;">對手戰力: ${500 + (i * 80)}</p>
+            ${isCurrent ? `<button class="btn btn-green" onclick="challengePVE(${i})">挑戰第 ${i} 關</button>` : ''}
+          </div>`;
+      }
+    }
+
+    function challengePVE(stageNum) {
+      if(player.stamina < 20) return addLog('❌ 體力不足 20！');
+      player.stamina -= 20;
+      let total = getTotalStats();
+      let myPower = total.shooting + total.speed + total.pass;
+      let oppPower = 180 + (stageNum * 30);
+
+      if(myPower >= oppPower) {
+        player.pve_stage++;
+        player.coins += 1000 + (stageNum * 200);
+        player.diamonds += 20;
+        addLog(`🏆 順利通關第 ${stageNum} 關！獲得 💰${1000 + (stageNum * 200)} 與 💎20！`);
+      } else {
+        addLog(`💔 挑戰第 ${stageNum} 關失敗，實力不足！`);
+      }
+      updateUI();
+    }
+
+    /* 異步 PVP 排行榜 */
+    async function loadLeaderboard() {
+      const { data } = await supabaseClient.from('leaderboards').select('*').limit(10);
+      const board = document.getElementById('pvp-board-list');
+      board.innerHTML = '';
       if(data) {
-        data.forEach(opp => {
-          if(opp.user_id !== currentAccount) {
-            list.innerHTML += `
-              <div class="item-card">
-                <b>⚽ 玩家: ${opp.user_id}</b>
-                <p>射門能力: ${opp.detailed_stats?.shooting || 70}</p>
-                <button class="btn" style="background:#dc2626;" onclick="challengePlayer('${opp.user_id}', ${opp.detailed_stats?.shooting || 70})">挑戰此玩家</button>
-              </div>`;
-          }
+        data.forEach((opp, idx) => {
+          board.innerHTML += `
+            <div class="item-card">
+              <b>No.${idx+1} 玩家: ${opp.user_id}</b> (🏆${opp.rank_points || 1000} 分)
+              ${opp.user_id !== currentAccount ? `<button class="btn btn-red" onclick="challengePVP('${opp.user_id}', ${opp.rank_points || 1000})">離線挑戰此玩家</button>` : ''}
+            </div>`;
         });
       }
     }
 
-    function challengePlayer(oppId, oppShooting) {
-      let myPower = player.stats.shooting + (player.equipment.boots ? player.equipment.boots.boost : 0);
-      if(myPower > oppShooting) {
-        player.coins += 500;
-        addLog(`🏆 擊敗線上玩家 [${oppId}]！獲得獎金 💰500！`);
+    function challengePVP(oppId, oppRank) {
+      if(player.stamina < 25) return addLog('❌ 體力不足 25！');
+      player.stamina -= 25;
+      player.quests.pvp++;
+      
+      let total = getTotalStats();
+      let myPower = total.shooting + total.speed;
+      
+      if(myPower + Math.random()*20 > 140) {
+        player.rank_points += 25;
+        player.coins += 800;
+        addLog(`🏆 異步對戰擊敗離線玩家 [${oppId}]！天梯積分 +25，💰+800！`);
       } else {
-        addLog(`💔 不敵玩家 [${oppId}]，回去多做射門特訓吧！`);
+        player.rank_points = Math.max(0, player.rank_points - 10);
+        addLog(`💔 對戰玩家 [${oppId}] 失敗，積分 -10。`);
       }
       updateUI();
     }
-
-    function rest() { player.stamina = Math.min(100, player.stamina + 50); addLog('💤 充分休息，體力 +50。'); updateUI(); }
   </script>
 </body>
 </html>
