@@ -499,16 +499,51 @@
       updateUI();
     }
 
+   let currentEqFilter = 'all';
+
+    function filterInventory(type, btn) {
+      currentEqFilter = type;
+      if(btn) {
+        document.querySelectorAll('.sub-eq-btn').forEach(b => b.style.opacity = '0.6');
+        btn.style.opacity = '1';
+      }
+      renderInventory();
+    }
+
     function renderInventory() {
       const list = document.getElementById('inventory-list');
+      if(!list) return;
       list.innerHTML = '';
-      player.inventory.forEach((item) => {
+
+      // 根據選取的子分頁篩選裝備
+      const filtered = player.inventory.filter(item => {
+        if(currentEqFilter === 'all') return true;
+        return item.type === currentEqFilter;
+      });
+
+      if(filtered.length === 0) {
+        list.innerHTML = `<p style="font-size:0.8em; color:#64748b; padding:10px;">該分類無裝備</p>`;
+        return;
+      }
+
+      filtered.forEach((item) => {
+        let isEquipped = player.equipment[item.type]?.uid === item.uid;
         list.innerHTML += `
-          <div class="item-card">
-            <b>${item.name}</b>
-            <button class="btn btn-green" onclick="equip('${item.uid}')">穿上裝備</button>
+          <div class="item-card" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <b>${item.name}</b>
+              <div style="font-size:0.75em; color:#94a3b8;">${getItemStatDesc(item)}</div>
+            </div>
+            <button class="btn ${isEquipped ? 'btn-orange' : 'btn-green'}" style="width:70px; margin:0;" onclick="equip('${item.uid}')">
+              ${isEquipped ? '已穿上' : '裝備'}
+            </button>
           </div>`;
       });
+    }
+
+    function getItemStatDesc(item) {
+      if(!item.boost) return '';
+      return Object.entries(item.boost).map(([k, v]) => `${k} +${v}`).join(', ');
     }
 
     function equip(uid) {
