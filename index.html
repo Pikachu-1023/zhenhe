@@ -721,6 +721,7 @@
     /* 排行榜與 PVP 對戰 */
    /* --- PVE 關卡挑戰邏輯 --- */
    /* --- PVE 關卡挑戰邏輯 (修復：自動同步寫入資料庫) --- */
+    /* --- PVE 關卡挑戰邏輯 (挑戰成功即時寫入 Supabase) --- */
     async function challengePVE(stageNum) {
       if (player.stamina < 15) {
         alert('⚡ 體力不足 15！無法挑戰關卡。');
@@ -729,7 +730,6 @@
 
       player.stamina -= 15;
 
-      // 簡單能力值計算與勝率模擬
       const stats = player.stats || {};
       const totalPower = (stats.shooting || 10) + (stats.speed || 10) + (stats.pass || 10);
       const enemyPower = stageNum * 25 + 15;
@@ -737,8 +737,9 @@
       if (totalPower + Math.floor(Math.random() * 30) >= enemyPower) {
         const rewardCoins = stageNum * 100 + 100;
         const rewardDiamonds = 5;
-        const rewardRankPoints = 20; // 通關增加天梯戰力/積分
+        const rewardRankPoints = 20;
 
+        // 1. 本地數據加算
         player.coins = (player.coins || 0) + rewardCoins;
         player.diamonds = (player.diamonds || 0) + rewardDiamonds;
         player.rank_points = (player.rank_points || 1000) + rewardRankPoints;
@@ -747,7 +748,7 @@
           player.pve_stage = (player.pve_stage || 1) + 1;
         }
 
-        // 1. 強制把最新數據寫回 Supabase 資料庫
+        // 2. 立即將最新金幣、鑽石與關卡寫回 Supabase 資料庫
         const { error } = await supabaseClient
           .from('players')
           .update({
@@ -757,25 +758,25 @@
             pve_stage: player.pve_stage,
             stamina: player.stamina
           })
-          .eq('user_id', player.user_id);
+          .eq('user_id', currentAccount);
 
         if (error) {
           console.error('儲存失敗:', error);
-          alert(`🎉 挑戰成功！但寫入資料庫失敗：${error.message}`);
+          alert(`⚠️ 挑戰成功，但寫入資料庫失敗：${error.message}`);
         } else {
           alert(`🎉 挑戰第 ${stageNum} 關成功！\n獲得 💰 金幣 +${rewardCoins}、💎 鑽石 +${rewardDiamonds}、🏆 戰力 +${rewardRankPoints}`);
         }
       } else {
-        // 失敗時也扣除體力並同步更新體力值
+        // 失敗時也扣除體力並同步
         await supabaseClient
           .from('players')
           .update({ stamina: player.stamina })
-          .eq('user_id', player.user_id);
+          .eq('user_id', currentAccount);
 
         alert(`❌ 挑戰第 ${stageNum} 關失敗！再提升一下戰力吧。`);
       }
 
-      // 2. 刷新畫面
+      // 3. 刷新 UI 畫面
       updateUI();
     }
     /* --- 2. 每日任務與自動刷新 --- */
