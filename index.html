@@ -829,6 +829,39 @@
       html += '</div>';
       pveBox.innerHTML = html;
     }
+    /* --- 4. PVP 排行榜載入 --- */
+    async function loadLeaderboard() {
+      const rankBox = document.getElementById('leaderboard-list');
+      if (!rankBox) return;
+
+      rankBox.innerHTML = '載入排行榜中...';
+
+      const { data, error } = await supabaseClient
+        .from('players')
+        .select('user_id, rank_points')
+        .order('rank_points', { ascending: false })
+        .limit(10);
+
+      if (error || !data) {
+        rankBox.innerHTML = '❌ 載入排行榜失敗';
+        return;
+      }
+
+      let html = '<table style="width:100%; text-align:left; border-collapse:collapse; margin-top:10px;">';
+      html += '<tr style="border-bottom:1px solid #334155; color:#94a3b8;"><th style="padding:8px;">名次</th><th>玩家</th><th>天梯積分</th></tr>';
+
+      data.forEach((row, idx) => {
+        html += `
+          <tr style="border-bottom:1px solid #1e293b;">
+            <td style="padding:8px;">${idx + 1}</td>
+            <td>${row.user_id}</td>
+            <td>🏆 ${row.rank_points || 1000}</td>
+          </tr>
+        `;
+      });
+      html += '</table>';
+      rankBox.innerHTML = html;
+    }
   </script>
 </body>
 </html>
