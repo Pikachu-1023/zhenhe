@@ -849,37 +849,57 @@
       pveBox.innerHTML = html;
     }
     /* --- 4. PVP 排行榜載入 --- */
-    async function loadLeaderboard() {
+   /* --- 4. 雙排行榜（戰力榜 / 財富榜） --- */
+    let currentRankType = 'power';
+
+    async function loadLeaderboard(type = currentRankType) {
+      currentRankType = type;
       const rankBox = document.getElementById('leaderboard-list');
       if (!rankBox) return;
 
-      rankBox.innerHTML = '載入排行榜中...';
+      const isPower = type === 'power';
+      
+      // 按鈕切換 UI
+      let html = `
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+          <button onclick="loadLeaderboard('power')" class="btn ${isPower ? 'btn-green' : 'btn-gray'}" style="flex:1;">⚔️ 戰力排行榜</button>
+          <button onclick="loadLeaderboard('wealth')" class="btn ${!isPower ? 'btn-green' : 'btn-gray'}" style="flex:1;">💰 財富排行榜</button>
+        </div>
+        <div id="rank-table-content">載入排行榜中...</div>
+      `;
+      rankBox.innerHTML = html;
 
+      const tableBox = document.getElementById('rank-table-content');
+
+      // 戰力榜抓 rank_points；財富榜抓 coins
+      const orderColumn = isPower ? 'rank_points' : 'coins';
       const { data, error } = await supabaseClient
         .from('players')
-        .select('user_id, rank_points')
-        .order('rank_points', { ascending: false })
+        .select('user_id, rank_points, coins')
+        .order(orderColumn, { ascending: false })
         .limit(10);
 
       if (error || !data) {
-        rankBox.innerHTML = '❌ 載入排行榜失敗';
+        tableBox.innerHTML = '❌ 載入排行榜失敗';
         return;
       }
 
-      let html = '<table style="width:100%; text-align:left; border-collapse:collapse; margin-top:10px;">';
-      html += '<tr style="border-bottom:1px solid #334155; color:#94a3b8;"><th style="padding:8px;">名次</th><th>玩家</th><th>天梯積分</th></tr>';
+      let tableHtml = '<table style="width:100%; text-align:left; border-collapse:collapse;">';
+      tableHtml += `<tr style="border-bottom:1px solid #334155; color:#94a3b8;"><th style="padding:8px;">名次</th><th>玩家</th><th>${isPower ? '⚔️ 戰力 / 天梯積分' : '💰 總財富 (金幣)'}</th></tr>`;
 
       data.forEach((row, idx) => {
-        html += `
+        const val = isPower ? (row.rank_points || 1000) : (row.coins || 0);
+        const icon = isPower ? '🏆' : '🪙';
+        tableHtml += `
           <tr style="border-bottom:1px solid #1e293b;">
             <td style="padding:8px;">${idx + 1}</td>
             <td>${row.user_id}</td>
-            <td>🏆 ${row.rank_points || 1000}</td>
+            <td>${icon} ${val.toLocaleString()}</td>
           </tr>
         `;
       });
-      html += '</table>';
-      rankBox.innerHTML = html;
+      tableHtml += '</table>';
+      tableBox.innerHTML = tableHtml;
     }
   </script>
 </body>
