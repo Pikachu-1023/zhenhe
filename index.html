@@ -380,24 +380,62 @@
       return totals;
     }
 
+    /* --- 1. UI 數據與屬性渲染 (解決 undefined) --- */
     function updateUI() {
-      document.getElementById('p-coins').innerText = player.coins;
-      document.getElementById('p-diamonds').innerText = player.diamonds;
-      document.getElementById('p-stamina').innerText = player.stamina;
-      document.getElementById('p-rank').innerText = player.rank_points;
-      document.getElementById('pve-stage-num').innerText = player.pve_stage;
+      if (!player) return;
 
-      const total = getTotalStats();
-      document.getElementById('s-shooting').innerText = total.shooting;
-      document.getElementById('s-pass').innerText = total.pass;
-      document.getElementById('s-dribble').innerText = total.dribble;
-      document.getElementById('s-fk').innerText = total.fk;
-      document.getElementById('s-speed').innerText = total.speed;
-      document.getElementById('s-acc').innerText = total.acc;
-      document.getElementById('s-stamina_max').innerText = total.stamina_max;
-      document.getElementById('s-str').innerText = total.str;
-      document.getElementById('s-def').innerText = total.def;
-      document.getElementById('s-gk').innerText = total.gk;
+      const stats = player.stats || {};
+      const equip = player.equipment || {};
+
+      // 安全讀取裝備加成
+      let bootBonus = (equip.boots && equip.boots.boost) ? equip.boots.boost : {};
+      let kitBonus = (equip.kits && equip.kits.boost) ? equip.kits.boost : {};
+      let padBonus = (equip.pads && equip.pads.boost) ? equip.pads.boost : {};
+      let gloveBonus = (equip.gloves && equip.gloves.boost) ? equip.gloves.boost : {};
+
+      const getStat = (key) => {
+        const base = stats[key] || 10;
+        const bonus = (bootBonus[key] || 0) + (kitBonus[key] || 0) + (padBonus[key] || 0) + (gloveBonus[key] || 0);
+        return base + bonus;
+      };
+
+      // 頂部狀態欄
+      const accEl = document.getElementById('p-account');
+      if (accEl) accEl.innerText = currentAccount || player.user_id || '-';
+      
+      const rankEl = document.getElementById('p-rank');
+      if (rankEl) rankEl.innerText = player.rank_points ?? 1000;
+      
+      const coinEl = document.getElementById('p-coins');
+      if (coinEl) coinEl.innerText = player.coins ?? 0;
+      
+      const diamondEl = document.getElementById('p-diamonds');
+      if (diamondEl) diamondEl.innerText = player.diamonds ?? 0;
+      
+      const staminaEl = document.getElementById('p-stamina');
+      if (staminaEl) staminaEl.innerText = player.stamina ?? 100;
+
+      // 填入面板屬性數值
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+      };
+
+      setVal('s-shooting', getStat('shooting'));
+      setVal('s-pass', getStat('pass'));
+      setVal('s-dribble', getStat('dribble'));
+      setVal('s-fk', getStat('fk'));
+      setVal('s-speed', getStat('speed'));
+      setVal('s-acc', getStat('acc'));
+      setVal('s-stamina_max', stats.stamina_max || 100);
+      setVal('s-str', getStat('str'));
+      setVal('s-def', getStat('def'));
+      setVal('s-gk', getStat('gk'));
+
+      // 同步刷新分頁內容
+      if (typeof renderQuests === 'function') renderQuests();
+      if (typeof renderPVE === 'function') renderPVE();
+    }
 
       // 裝備欄顯示
       for(let eq in player.equipment) {
