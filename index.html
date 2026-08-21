@@ -751,26 +751,38 @@
     }
 
     /* 排行榜與 PVP 對戰 */
-    async function challengePVP(oppId, oppRank) {
-      if(player.stamina < 25) return addLog('❌ 體力不足 25！');
-      player.stamina -= 25;
-      player.quests.pvp++;
-      
-      let total = getTotalStats();
-      let myPower = total.shooting + total.speed + total.pass;
-      
-      if(myPower + (Math.random() * 30) > 180) {
-        player.rank_points += 25;
-        player.coins += 800;
-        addLog(`🏆 擊敗玩家 [${oppId}]！天梯積分 +25 (目前: ${player.rank_points})，💰+800！`);
+   /* --- PVE 關卡挑戰邏輯 --- */
+    async function challengePVE(stageNum) {
+      if (player.stamina < 15) {
+        alert('⚡ 體力不足 15！無法挑戰關卡。');
+        return;
+      }
+
+      player.stamina -= 15;
+
+      // 簡單能力值計算與勝率模擬
+      const stats = player.stats || {};
+      const totalPower = (stats.shooting || 10) + (stats.speed || 10) + (stats.pass || 10);
+      const enemyPower = stageNum * 25 + 15;
+
+      if (totalPower + Math.floor(Math.random() * 30) >= enemyPower) {
+        const rewardCoins = stageNum * 100 + 100;
+        const rewardDiamonds = 5;
+        
+        player.coins = (player.coins || 0) + rewardCoins;
+        player.diamonds = (player.diamonds || 0) + rewardDiamonds;
+        
+        if (stageNum === (player.pve_stage || 1)) {
+          player.pve_stage = (player.pve_stage || 1) + 1;
+        }
+
+        alert(`🎉 挑戰第 ${stageNum} 關成功！\n獲得 💰 金幣 +${rewardCoins}、💎 鑽石 +${rewardDiamonds}`);
       } else {
-        player.rank_points = Math.max(0, player.rank_points - 10);
-        addLog(`💔 對戰玩家 [${oppId}] 失敗，積分 -10 (目前: ${player.rank_points})。`);
+        alert(`❌ 挑戰第 ${stageNum} 關失敗！再提升一下戰力吧。`);
       }
 
       updateUI();
-      await autoSave();
-      if(typeof loadLeaderboard === 'function') await loadLeaderboard();
+      if (typeof autoSave === 'function') await autoSave();
     }
     /* --- 2. 每日任務與自動刷新 --- */
     function renderQuests() {
