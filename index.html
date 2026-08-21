@@ -807,6 +807,28 @@
       html += '</div>';
       questBox.innerHTML = html;
     }
+    /* --- 3. PVE 關卡面板 --- */
+    function renderPVE() {
+      const pveBox = document.getElementById('pve-container');
+      if (!pveBox) return;
+
+      const currentStage = player.pve_stage || 1;
+      let html = `<p style="margin-bottom:15px;">當前進度：<b>第 ${currentStage} / 20 關</b></p>`;
+      
+      html += '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:10px;">';
+      for (let i = 1; i <= 20; i++) {
+        const isCurrent = i === currentStage;
+        const isPassed = i < currentStage;
+        html += `
+          <div style="background:${isCurrent ? '#0284c7' : isPassed ? '#1e293b' : '#0f172a'}; border: 1px solid ${isCurrent ? '#38bdf8' : '#334155'}; padding:10px; text-align:center; border-radius:6px;">
+            <div style="font-weight:bold;">第 ${i} 關</div>
+            <div style="font-size:0.75em; margin:5px 0; color:#94a3b8;">${isPassed ? '✅ 過關' : isCurrent ? '⚔️ 挑戰' : '🔒 鎖定'}</div>
+          </div>
+        `;
+      }
+      html += '</div>';
+      pveBox.innerHTML = html;
+    }
   </script>
 </body>
 </html>
