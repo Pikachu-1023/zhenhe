@@ -770,6 +770,43 @@
       await autoSave();
       if(typeof loadLeaderboard === 'function') await loadLeaderboard();
     }
+    /* --- 2. 每日任務與自動刷新 --- */
+    function renderQuests() {
+      const questBox = document.getElementById('quest-list');
+      if (!questBox) return;
+
+      const today = new Date().toDateString();
+      if (player.last_quest_date !== today) {
+        player.last_quest_date = today;
+        player.quests = { train: 0, gacha: 0, pvp: 0 };
+      }
+
+      const q = player.quests || { train: 0, gacha: 0, pvp: 0 };
+
+      const quests = [
+        { id: 'train', name: '🏋️ 完成 3 次特訓', current: q.train || 0, max: 3, reward: '💰 200 金幣' },
+        { id: 'gacha', name: '🎰 進行 1 次裝備抽卡', current: q.gacha || 0, max: 1, reward: '💎 10 鑽石' },
+        { id: 'pvp', name: '🏆 完成 1 次 PVP 挑戰', current: q.pvp || 0, max: 1, reward: '⚡ 20 體力' }
+      ];
+
+      let html = '<div style="display:grid; gap:10px; margin-top:10px;">';
+      quests.forEach(item => {
+        const isDone = item.current >= item.max;
+        html += `
+          <div style="background:#1e293b; padding:12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:bold;">${item.name}</div>
+              <div style="font-size:0.85em; color:#94a3b8;">進度：${Math.min(item.current, item.max)} / ${item.max} | 獎勵：${item.reward}</div>
+            </div>
+            <button class="btn ${isDone ? 'btn-gray' : 'btn-green'}" ${isDone ? 'disabled' : ''}>
+              ${isDone ? '已完成' : '進行中'}
+            </button>
+          </div>
+        `;
+      });
+      html += '</div>';
+      questBox.innerHTML = html;
+    }
   </script>
 </body>
 </html>
