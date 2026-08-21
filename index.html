@@ -330,43 +330,11 @@
         if(typeof fixInventoryUIDs === 'function') fixInventoryUIDs();
       }
     }
-/* --- 雲端強制自動儲存 --- */
-    async function autoSave() {
-      if (!currentAccount) return;
-      
-      const { error } = await supabaseClient
-        .from('players')
-        .update({
-          rank_points: player.rank_points,
-          coins: player.coins,
-          diamonds: player.diamonds,
-          stamina: player.stamina,
-          pve_stage: player.pve_stage,
-          detailed_stats: player.stats,
-          full_equipment: player.equipment,
-          inventory: player.inventory,
-          quest_progress: player.quests
-        })
-        .eq('user_id', currentAccount);
 
-      if (error) {
-        console.error('雲端同步失敗:', error);
-      }
-    }
-    function addLog(msg) {
-      const box = document.getElementById('logBox');
-      box.innerHTML = `<div style="margin-bottom:2px;">[${new Date().toLocaleTimeString()}] ${msg}</div>` + box.innerHTML;
-    }
 
-    async function autoSave() {
-      if(!currentAccount) return;
-      await supabaseClient.from('players').upsert([{
-        user_id: currentAccount, coins: player.coins, diamonds: player.diamonds,
-        rank_points: player.rank_points, pve_stage: player.pve_stage,
-        detailed_stats: player.stats, full_equipment: player.equipment,
-        inventory: player.inventory, quest_progress: player.quests
-      }]);
-    }
+     
+
+    
 
     /* 正確能力值算式：基礎值 + 裝備動態加成 */
     function getTotalStats() {
@@ -652,10 +620,11 @@
     }
 
     /* 強制寫入 Supabase (更新個人數據 + 排行榜) */
+  /* 強制寫入 Supabase (更新個人數據 + 排行榜) */
     async function autoSave() {
       if (!currentAccount) return;
-      fixInventoryUIDs();
-      
+      if (typeof fixInventoryUIDs === 'function') fixInventoryUIDs();
+
       const { error } = await supabaseClient
         .from('players')
         .update({
@@ -663,11 +632,11 @@
           coins: player.coins,
           diamonds: player.diamonds,
           stamina: player.stamina,
-          pve_stage: player.pve_stage,
+          pve_stage: player.pve_stage || 1, // 👈 確保寫入關卡進度
           detailed_stats: player.stats,
           full_equipment: player.equipment,
           inventory: player.inventory,
-          quest_progress: player.quests
+          quest_progress: player.quests || player.quest_progress
         })
         .eq('user_id', currentAccount);
 
@@ -678,7 +647,6 @@
 
       if (error) console.error('雲端同步失敗:', error);
     }
-
     /* 抽獎並寫入雲端 */
     async function drawGacha() {
       if(player.coins < 500) return addLog('❌ 金幣不足 500 ！');
